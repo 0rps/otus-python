@@ -4,11 +4,12 @@ import re
 import json
 import gzip
 import argparse
-import unittest
-from logging import getLogger
+import logging
 from collections import defaultdict
 
-logger = getLogger(__file__)
+FORMAT = '[%(asctime)s] %(levelname).1s %(message)s'
+DATEFMT = '%Y.%m.%d %H:%M:%S'
+logging.basicConfig(format=FORMAT, datefmt=DATEFMT, level=logging.INFO)
 
 config = {
     "REPORT_SIZE": 1000,
@@ -19,14 +20,14 @@ config = {
 
 
 def write_report(data, filepath):
-    logger.info("Writing data to report")
+    logging.info("Report generation")
 
     marker = '$table_json'
     template_name = 'report.html'
 
     template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), template_name)
     if not os.path.exists(template_path):
-        logger.error('No template file for report')
+        logging.error('No template file for report')
         return False
 
     with open(filepath, 'w') as target:
@@ -42,7 +43,7 @@ def write_report(data, filepath):
                 else:
                     target.write(line)
 
-    logger.info("Report {} is generated".format(os.path.basename(filepath)))
+    logging.info("Success: {} generated".format(os.path.basename(filepath)))
     return True
 
 
@@ -69,7 +70,7 @@ def read_log_file(filepath, is_gzip):
 
 
 def handle_log(filepath, is_gzip, report_size, threshold):
-    logger.info("Trying to handle file: {}".format(os.path.basename(filepath)))
+    logging.info("Trying to handle log file: {}".format(os.path.basename(filepath)))
 
     data = defaultdict(lambda: {'time_sum': 0.0, 'times': []})
     regex = log_line_regex()
@@ -93,10 +94,10 @@ def handle_log(filepath, is_gzip, report_size, threshold):
         total_count += 1
 
     if not_parsed_count / total_count > threshold:
-        logger.error("Couldn't parse log file, too much errors")
+        logging.error("Couldn't parse log file, too much errors")
         return
 
-    logger.info("File parsed: lines = {}, success lines = {}, error lines = {}".format(total_count,
+    logging.info("File parsed: lines = {}, success lines = {}, error lines = {}".format(total_count,
                                                                                        total_count - not_parsed_count,
                                                                                        not_parsed_count))
 
@@ -129,7 +130,7 @@ def handle_log(filepath, is_gzip, report_size, threshold):
 
         del time_data['times']
 
-    logger.info("Log file successfully handled")
+    logging.info("Success: log file successfully handled")
 
     return data
 
@@ -140,7 +141,7 @@ def log_filename_regex():
 
 
 def find_last_log(log_dir):
-    logger.info("Trying to find last log file")
+    logging.info("Trying to find last log file")
     filepath = None
     date = None
     is_gzip = None
@@ -157,30 +158,30 @@ def find_last_log(log_dir):
                 is_gzip = match.group('ext') == '.gz'
 
     if filepath is None:
-        logger.info("No log file found")
+        logging.info("No log file found")
     else:
-        logger.info("Last log file: {}".format(os.path.basename(filepath)))
+        logging.info("Success: last log file {}".format(os.path.basename(filepath)))
 
     return filepath, date, is_gzip
 
 
-def release_mode(conf):
+def run_analyzer(conf):
     conf_report_size = conf['REPORT_SIZE']
     conf_report_dir = conf['REPORT_DIR']
     conf_log_dir = conf['LOG_DIR']
     conf_threshold = conf['THRESHOLD']
 
-    log_filepath, log_date, log_is_gsip = find_last_log(conf_log_dir)
+    log_filepath, log_date, log_is_gzip = find_last_log(conf_log_dir)
     if log_filepath is None:
         return
 
     report_name = "report-{}.{}.{}.html".format(log_date[:4], log_date[4:6], log_date[6:])
     output_path = os.path.join(conf_report_dir, report_name)
     if os.path.exists(output_path):
-        logger.info("Report for this file exists")
+        logging.info("Report for this file exists")
         pass
 
-    data = handle_log(log_filepath, log_is_gsip, conf_report_size, conf_threshold)
+    data = handle_log(log_filepath, log_is_gzip, conf_report_size, conf_threshold)
     if data is None:
         return
 
@@ -189,30 +190,37 @@ def release_mode(conf):
 
 
 def read_config(filepath=None):
-    logger.info('Handle program configuration')
+    logging.info('Configuration')
     conf = config.copy()
 
     if filepath:
-        logger.info('Trying to parse config file')
+        logging.info('Trying to parse config file')
         if not os.path.exists(filepath):
-            logger.error("Config file doesn't exist")
-            return
+            logging.error("Config file doesn't exist")
+            exit(-1)
 
         try:
             file_data = json.loads(filepath)
         except json.JSONDecodeError:
-            logger.error("Couldn't parse config file")
-            return
+            logging.error("Couldn't parse config file")
+            exit(-1)
         else:
             conf.update(file_data)
-    logger.info('Success: configuration handled')
+
+    if 'LOG_FILE' in conf:
+        logging.info('Set file for logging: "{}"'.format(conf['LOG_FILE']))
+        log_file = conf['LOG_FILE']
+        logging.basicConfig(format=FORMAT, datefmt=DATEFMT, filename=log_file, level=logging.INFO)
+        del conf['LOG_FILE']
+
+    logging.info('Success: configuration handled')
+
     return conf
 
 
 def main():
     argp = argparse.ArgumentParser(description="Nginx log report handler")
-    argp.add_argument('--config', default='config.json', help='Set config file')
-    argp.add_argument('--run-test', help='Run unit tests')
+    argp.add_argument('--config', nargs='?', const='config.json', help='Set config file')
 
     args = vars(argp.parse_args())
 
@@ -220,17 +228,15 @@ def main():
     if 'config' in args:
         config_file = args['config']
 
-    if 'run-test' in args:
-        unittest.main()
-    else:
-        conf = read_config(config_file)
-        if conf is None:
-            return
-        release_mode(conf)
+    conf = read_config(config_file)
+    if conf is None:
+        return
+
+    run_analyzer(conf)
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as ex:
-        logger.exception("Caught exception")
+        logging.exception("Caught exception")
