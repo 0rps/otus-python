@@ -173,20 +173,21 @@ def run_analyzer(conf):
 
     log_filepath, log_date, log_is_gzip = find_last_log(conf_log_dir)
     if log_filepath is None:
-        return
+        exit(0)
 
     report_name = "report-{}.{}.{}.html".format(log_date[:4], log_date[4:6], log_date[6:])
     output_path = os.path.join(conf_report_dir, report_name)
     if os.path.exists(output_path):
         logging.info("Report for this file exists")
         pass
+        #exit(0)
 
     data = handle_log(log_filepath, log_is_gzip, conf_report_size, conf_threshold)
     if data is None:
-        return
+        exit(-1)
 
     if not write_report(data, output_path):
-        return
+        exit(-1)
 
 
 def read_config(filepath=None):
