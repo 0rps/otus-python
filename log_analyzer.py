@@ -98,8 +98,8 @@ def handle_log(filepath, is_gzip, report_size, threshold):
         return
 
     logging.info("File parsed: lines = {}, success lines = {}, error lines = {}".format(total_count,
-                                                                                       total_count - not_parsed_count,
-                                                                                       not_parsed_count))
+                                                                                        total_count - not_parsed_count,
+                                                                                        not_parsed_count))
 
     data = list(data.values())
 
@@ -136,7 +136,7 @@ def handle_log(filepath, is_gzip, report_size, threshold):
 
 
 def log_filename_regex():
-    regex = re.compile(r'(?P<name>nginx\-access\-ui\.log\-(?P<date>\d{8}))(?P<ext>(?:\.gz)?)$')
+    regex = re.compile(r'(?P<name>nginx-access-ui\.log-(?P<date>\d{8}))(?P<ext>(?:\.gz)?)$')
     return regex
 
 
