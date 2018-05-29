@@ -227,7 +227,9 @@ def find_last_log(log_dir):
     if file is None:
         logging.info("No nginx log file found")
     else:
-        is_gzip = regex.match(file).group('ext') == '.gz'
+        match = regex.match(file)
+        is_gzip = match.group('ext') == '.gz'
+        date = match.group('date')
         filepath = os.path.join(log_dir, file)
         logging.info("Success: last nginx log file {}".format(os.path.basename(filepath)))
 
@@ -277,18 +279,20 @@ def read_config(filepath=None):
             exit(-1)
 
         try:
-            file_data = json.loads(filepath)
-        except json.JSONDecodeError:
+            file_data = json.loads(filepath, encoding='utf-8')
+        except json.JSONDecodeError as ex:
             exit(-1)
         else:
             conf.update(file_data)
 
+    log_file = None
     if 'LOG_FILE' in conf and conf['LOG_FILE'] is not None:
         log_file = conf['LOG_FILE']
-        msgfmt = '[%(asctime)s] %(levelname).1s %(message)s'
-        datefmt = '%Y.%m.%d %H:%M:%S'
-        logging.basicConfig(format=msgfmt, datefmt=datefmt, filename=log_file, level=logging.INFO)
         del conf['LOG_FILE']
+
+    msgfmt = '[%(asctime)s] %(levelname).1s %(message)s'
+    datefmt = '%Y.%m.%d %H:%M:%S'
+    logging.basicConfig(format=msgfmt, datefmt=datefmt, filename=log_file, level=logging.INFO)
 
     logging.info('Success: configured')
 
