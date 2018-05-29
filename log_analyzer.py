@@ -41,9 +41,11 @@ def write_report(data, report_dir, filename):
 
     marker = '$table_json'
     template_name = 'report.html'
-    jquery_file = 'jquery.tablesorter.js'
+    jquery_file = 'jquery.tablesorter.min.js'
+    data_dir = 'data'
 
     template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 data_dir,
                                  template_name)
     if not os.path.exists(template_path):
         logging.error('No template file for report')
@@ -66,6 +68,7 @@ def write_report(data, report_dir, filename):
 
     jquery_file_path_src = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
+        data_dir,
         jquery_file)
     jquery_file_path_dst = os.path.join(report_dir, jquery_file)
     shutil.copyfile(jquery_file_path_src, jquery_file_path_dst)
@@ -338,7 +341,7 @@ def read_config(filepath=None):
 if __name__ == "__main__":
     argp = argparse.ArgumentParser(description="Log analyzer")
     argp.add_argument('--config',
-                      default='config.json',
+                      default='./data/config.json',
                       help='Set config file')
 
     args = vars(argp.parse_args())
