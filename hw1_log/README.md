@@ -4,19 +4,19 @@ Utility for generating reports about url requests from log files.
 Generates report `"report-YYYY.MM.dd.html"` from log file `"nginx-access-ui.log-YYYYMMdd[.gz]"`.
 
 #### Using:
-######To run tests:
+##### To run tests:
 
 ```
     python3 test_log_analyzer.py
 ```
 
-######To run script:
+##### To run script:
 
 ```
     python3 log_analyzer.py [--config=your_config_file]
 ```
 
-####### Config
+##### Config
 
 If you don't use `--config option`, script read configurations from `'config.json'`.
 Configuration file options:
