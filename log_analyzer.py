@@ -17,6 +17,12 @@ config = {
 
 
 def write_report(data, filepath):
+    """
+    Generate report
+    :param data: data for report
+    :param filepath: path of report
+    :return: success flag
+    """
     logging.info("Report generation")
 
     marker = '$table_json'
@@ -45,6 +51,10 @@ def write_report(data, filepath):
 
 
 def log_line_regex():
+    """
+    Regex for log line parsing
+    :return: regex
+    """
     regex = re.compile(r'[^\"]+'
                        r'\"'
                        r'\w+\s(?P<url>[^\s]+)\s[^\"]+'
@@ -56,6 +66,12 @@ def log_line_regex():
 
 
 def read_log_file(filepath, is_gzip):
+    """
+    Read log file (plain text or gzipped data)
+    :param filepath: path of log
+    :param is_gzip: is gzip file
+    :return: generator
+    """
     if is_gzip:
         with gzip.open(filepath) as file:
             for line in file:
@@ -66,8 +82,15 @@ def read_log_file(filepath, is_gzip):
                 yield line
 
 
-def process_log(filepath, is_gzip, report_size, threshold):
-    logging.info("Trying to process nginx log file: {}".format(os.path.basename(filepath)))
+def process_log(stream, report_size, threshold):
+    """
+    Parse log file, process url data
+    :param stream: log stream
+    :param report_size: size of output data
+    :param threshold: error threshold
+    :return: processed data
+    """
+    logging.info("Trying to process nginx log file")
 
     data = defaultdict(lambda: {'time_sum': 0.0, 'times': []})
     regex = log_line_regex()
@@ -76,7 +99,7 @@ def process_log(filepath, is_gzip, report_size, threshold):
     total_count = 0
     total_time = 0.0
 
-    for log_line in read_log_file(filepath, is_gzip):
+    for log_line in stream:
         match = regex.match(log_line)
         if match is None:
             not_parsed_count += 1
@@ -133,36 +156,90 @@ def process_log(filepath, is_gzip, report_size, threshold):
 
 
 def log_filename_regex():
+    """
+    Regex for log filename
+    :return: regex
+    """
     regex = re.compile(r'(?P<name>nginx-access-ui\.log-(?P<date>\d{8}))(?P<ext>(?:\.gz)?)$')
     return regex
 
 
-def find_last_log(log_dir):
-    logging.info("Trying to find last nginx log file")
-    filepath = None
-    date = None
-    is_gzip = None
+def check_strdate(date_str):
+    """
+    Check if date is valid
+    :param date_str: date in str format
+    :return: is valid
+    """
+    year = int(date_str[:4])
+    month = int(date_str[4:6])
+    day = int(date_str[6:])
 
-    regex = log_filename_regex()
+    if year < 1970:
+        return False
 
-    for file in os.listdir(log_dir):
+    if month == 0 or month > 12:
+        return False
+
+    if day == 0 or day > 31:
+        return False
+
+    return True
+
+
+def find_last_log_from_list(regex, log_dir_iter):
+    """
+    Find last log file
+    :param regex: compiled filename regex
+    :param log_dir_iter: listdir iterator
+    :return: filename
+    """
+    res_file = None
+    res_date = None
+
+    for file in log_dir_iter:
         match = regex.match(file)
         if match:
             cur_date = match.group('date')
-            if (cur_date and date and cur_date > date) or date is None:
-                date = cur_date
-                filepath = os.path.join(log_dir, file)
-                is_gzip = match.group('ext') == '.gz'
+            if cur_date is None or not check_strdate(cur_date):
+                continue
 
-    if filepath is None:
+            if res_date is None or (cur_date and res_date and cur_date > res_date):
+                res_date = cur_date
+                res_file = file
+
+    return res_file
+
+
+def find_last_log(log_dir):
+    """
+    Find last log, get listdir and put it in find_last_log_from_list
+    :param log_dir: directory of log files
+    :return: filepath, date of file, gzip flag
+    """
+    logging.info("Trying to find last nginx log file")
+    date = None
+    filepath = None
+    is_gzip = None
+
+    regex = log_filename_regex()
+    file = find_last_log_from_list(regex, os.listdir(log_dir))
+
+    if file is None:
         logging.info("No nginx log file found")
     else:
+        is_gzip = regex.match(file).group('ext') == '.gz'
+        filepath = os.path.join(log_dir, file)
         logging.info("Success: last nginx log file {}".format(os.path.basename(filepath)))
 
     return filepath, date, is_gzip
 
 
 def run_analyzer(conf):
+    """
+    Find last log file, process it and write report
+    :param conf: configuration
+    :return: success flag
+    """
     conf_report_size = conf['REPORT_SIZE']
     conf_report_dir = conf['REPORT_DIR']
     conf_log_dir = conf['LOG_DIR']
@@ -176,10 +253,10 @@ def run_analyzer(conf):
     output_path = os.path.join(conf_report_dir, report_name)
     if os.path.exists(output_path):
         logging.info("Report exists")
-        pass
-        #return True
+        return True
 
-    data = process_log(log_filepath, log_is_gzip, conf_report_size, conf_threshold)
+    log_stream = read_log_file(log_filepath, log_is_gzip)
+    data = process_log(log_stream, conf_report_size, conf_threshold)
     if data is None:
         return False
 
@@ -188,6 +265,11 @@ def run_analyzer(conf):
 
 
 def read_config(filepath=None):
+    """
+    Read configuration from file, setup logging
+    :param filepath: Config file
+    :return: config
+    """
     conf = config.copy()
 
     if filepath:
@@ -214,6 +296,9 @@ def read_config(filepath=None):
 
 
 def main():
+    """
+    Read cmd arguments, setup config, run analyzer
+    """
     argp = argparse.ArgumentParser(description="Nginx log report handler")
     argp.add_argument('--config', nargs='?', const='config.json', help='Set config file')
 
