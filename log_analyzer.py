@@ -7,15 +7,12 @@ import argparse
 import logging
 from collections import defaultdict
 
-FORMAT = '[%(asctime)s] %(levelname).1s %(message)s'
-DATEFMT = '%Y.%m.%d %H:%M:%S'
-logging.basicConfig(format=FORMAT, datefmt=DATEFMT, level=logging.INFO)
-
 config = {
     "REPORT_SIZE": 1000,
     "REPORT_DIR": "./reports",
     "LOG_DIR": "./log",
-    "THRESHOLD": 0.6
+    "ERROR_THRESHOLD": 0.6,
+    "LOG_FILE": None
 }
 
 
@@ -69,8 +66,8 @@ def read_log_file(filepath, is_gzip):
                 yield line
 
 
-def handle_log(filepath, is_gzip, report_size, threshold):
-    logging.info("Trying to handle log file: {}".format(os.path.basename(filepath)))
+def process_log(filepath, is_gzip, report_size, threshold):
+    logging.info("Trying to process nginx log file: {}".format(os.path.basename(filepath)))
 
     data = defaultdict(lambda: {'time_sum': 0.0, 'times': []})
     regex = log_line_regex()
@@ -130,7 +127,7 @@ def handle_log(filepath, is_gzip, report_size, threshold):
 
         del time_data['times']
 
-    logging.info("Success: log file successfully handled")
+    logging.info("Success: log file successfully processed")
 
     return data
 
@@ -141,7 +138,7 @@ def log_filename_regex():
 
 
 def find_last_log(log_dir):
-    logging.info("Trying to find last log file")
+    logging.info("Trying to find last nginx log file")
     filepath = None
     date = None
     is_gzip = None
@@ -158,9 +155,9 @@ def find_last_log(log_dir):
                 is_gzip = match.group('ext') == '.gz'
 
     if filepath is None:
-        logging.info("No log file found")
+        logging.info("No nginx log file found")
     else:
-        logging.info("Success: last log file {}".format(os.path.basename(filepath)))
+        logging.info("Success: last nginx log file {}".format(os.path.basename(filepath)))
 
     return filepath, date, is_gzip
 
@@ -169,52 +166,49 @@ def run_analyzer(conf):
     conf_report_size = conf['REPORT_SIZE']
     conf_report_dir = conf['REPORT_DIR']
     conf_log_dir = conf['LOG_DIR']
-    conf_threshold = conf['THRESHOLD']
+    conf_threshold = conf['ERROR_THRESHOLD']
 
     log_filepath, log_date, log_is_gzip = find_last_log(conf_log_dir)
     if log_filepath is None:
-        exit(0)
+        return True
 
     report_name = "report-{}.{}.{}.html".format(log_date[:4], log_date[4:6], log_date[6:])
     output_path = os.path.join(conf_report_dir, report_name)
     if os.path.exists(output_path):
-        logging.info("Report for this file exists")
+        logging.info("Report exists")
         pass
-        #exit(0)
+        #return True
 
-    data = handle_log(log_filepath, log_is_gzip, conf_report_size, conf_threshold)
+    data = process_log(log_filepath, log_is_gzip, conf_report_size, conf_threshold)
     if data is None:
-        exit(-1)
+        return False
 
     if not write_report(data, output_path):
-        exit(-1)
+        return False
 
 
 def read_config(filepath=None):
-    logging.info('Configuration')
     conf = config.copy()
 
     if filepath:
-        logging.info('Trying to parse config file')
         if not os.path.exists(filepath):
-            logging.error("Config file doesn't exist")
             exit(-1)
 
         try:
             file_data = json.loads(filepath)
         except json.JSONDecodeError:
-            logging.error("Couldn't parse config file")
             exit(-1)
         else:
             conf.update(file_data)
 
-    if 'LOG_FILE' in conf:
-        logging.info('Set file for logging: "{}"'.format(conf['LOG_FILE']))
+    if 'LOG_FILE' in conf and conf['LOG_FILE'] is not None:
         log_file = conf['LOG_FILE']
-        logging.basicConfig(format=FORMAT, datefmt=DATEFMT, filename=log_file, level=logging.INFO)
+        msgfmt = '[%(asctime)s] %(levelname).1s %(message)s'
+        datefmt = '%Y.%m.%d %H:%M:%S'
+        logging.basicConfig(format=msgfmt, datefmt=datefmt, filename=log_file, level=logging.INFO)
         del conf['LOG_FILE']
 
-    logging.info('Success: configuration handled')
+    logging.info('Success: configured')
 
     return conf
 
@@ -230,10 +224,9 @@ def main():
         config_file = args['config']
 
     conf = read_config(config_file)
-    if conf is None:
-        return
 
-    run_analyzer(conf)
+    if not run_analyzer(conf):
+        exit(-1)
 
 
 if __name__ == "__main__":
