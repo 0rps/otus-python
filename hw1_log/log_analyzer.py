@@ -341,7 +341,7 @@ def read_config(filepath=None):
 if __name__ == "__main__":
     argp = argparse.ArgumentParser(description="Log analyzer")
     argp.add_argument('--config',
-                      default='./data/config.json',
+                      default='config.json',
                       help='Set config file')
 
     args = vars(argp.parse_args())
