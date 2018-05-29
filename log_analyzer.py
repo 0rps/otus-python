@@ -5,6 +5,7 @@ import json
 import gzip
 import argparse
 import logging
+import shutil
 from collections import defaultdict
 
 config = {
@@ -16,24 +17,41 @@ config = {
 }
 
 
-def write_report(data, filepath):
+def make_path(filepath, is_dir=False):
+    """
+    Make path for file or for dir
+    :param filepath: target file or dir
+    :param is_dir: is filepath is dir
+    :return: None
+    """
+    dirname = filepath if is_dir else os.path.dirname(filepath)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+
+
+def write_report(data, report_dir, filename):
     """
     Generate report
     :param data: data for report
-    :param filepath: path of report
+    :param report_dir: dir for report
+    :param filename: name of report
     :return: success flag
     """
     logging.info("Report generation")
 
     marker = '$table_json'
     template_name = 'report.html'
+    jquery_file = 'jquery.tablesorter.js'
 
-    template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), template_name)
+    template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 template_name)
     if not os.path.exists(template_path):
         logging.error('No template file for report')
         return False
 
-    with open(filepath, 'w') as target:
+    make_path(report_dir, True)
+    report_path = os.path.join(report_dir, filename)
+    with open(report_path, 'w') as target:
         with open(template_path) as template:
             no_marker = True
             for line in template:
@@ -46,7 +64,13 @@ def write_report(data, filepath):
                 else:
                     target.write(line)
 
-    logging.info("Success: {} generated".format(os.path.basename(filepath)))
+    jquery_file_path_src = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        jquery_file)
+    jquery_file_path_dst = os.path.join(report_dir, jquery_file)
+    shutil.copyfile(jquery_file_path_src, jquery_file_path_dst)
+
+    logging.info("Success: {} generated".format(filename))
     return True
 
 
@@ -117,9 +141,11 @@ def process_log(stream, report_size, threshold):
         logging.error("Couldn't parse log file, too much errors")
         return
 
-    logging.info("File parsed: lines = {}, success lines = {}, error lines = {}".format(total_count,
-                                                                                        total_count - not_parsed_count,
-                                                                                        not_parsed_count))
+    msg = "File parsed: lines = {}, success lines = {}, error lines = {}"
+    msg = msg.format(total_count,
+                     total_count - not_parsed_count,
+                     not_parsed_count)
+    logging.info(msg)
 
     data = list(data.values())
 
@@ -133,7 +159,9 @@ def process_log(stream, report_size, threshold):
         count = len(sorted_times)
         center_idx = count // 2
         if count % 2 == 0:
-            time_med = (sorted_times[center_idx] + sorted_times[center_idx - 1]) / 2.0
+            time_med = sorted_times[center_idx]
+            time_med += sorted_times[center_idx - 1]
+            time_med = time_med / 2.0
         else:
             time_med = sorted_times[center_idx]
 
@@ -142,7 +170,8 @@ def process_log(stream, report_size, threshold):
 
         time_data['count'] = count
         time_data['count_perc'] = round(count * 100 / total_count, 3)
-        time_data['time_perc'] = round(time_data['time_sum'] * 100 / total_time, 3)
+        time_perc = time_data['time_sum'] * 100 / total_time
+        time_data['time_perc'] = round(time_perc, 3)
         time_data['time_max'] = round(time_max, 3)
         time_data['time_avg'] = round(time_avg, 3)
         time_data['time_med'] = round(time_med, 3)
@@ -160,7 +189,8 @@ def log_filename_regex():
     Regex for log filename
     :return: regex
     """
-    regex = re.compile(r'(?P<name>nginx-access-ui\.log-(?P<date>\d{8}))(?P<ext>(?:\.gz)?)$')
+    regex = re.compile(r'(?P<name>nginx-access-ui\.log-'
+                       r'(?P<date>\d{8}))(?P<ext>(?:\.gz)?)$')
     return regex
 
 
@@ -203,7 +233,7 @@ def find_last_log_from_list(regex, log_dir_iter):
             if cur_date is None or not check_strdate(cur_date):
                 continue
 
-            if res_date is None or (cur_date and res_date and cur_date > res_date):
+            if res_date is None or (cur_date and cur_date > res_date):
                 res_date = cur_date
                 res_file = file
 
@@ -231,29 +261,31 @@ def find_last_log(log_dir):
         is_gzip = match.group('ext') == '.gz'
         date = match.group('date')
         filepath = os.path.join(log_dir, file)
-        logging.info("Success: last nginx log file {}".format(os.path.basename(filepath)))
+        logging.info("Success: last nginx log file {}"
+                     .format(os.path.basename(filepath)))
 
     return filepath, date, is_gzip
 
 
-def run_analyzer(conf):
+def main(cfg):
     """
     Find last log file, process it and write report
-    :param conf: configuration
+    :param cfg: configuration
     :return: success flag
     """
-    conf_report_size = conf['REPORT_SIZE']
-    conf_report_dir = conf['REPORT_DIR']
-    conf_log_dir = conf['LOG_DIR']
-    conf_threshold = conf['ERROR_THRESHOLD']
+    conf_report_size = cfg['REPORT_SIZE']
+    conf_report_dir = cfg['REPORT_DIR']
+    conf_log_dir = cfg['LOG_DIR']
+    conf_threshold = cfg['ERROR_THRESHOLD']
 
     log_filepath, log_date, log_is_gzip = find_last_log(conf_log_dir)
     if log_filepath is None:
         return True
 
-    report_name = "report-{}.{}.{}.html".format(log_date[:4], log_date[4:6], log_date[6:])
-    output_path = os.path.join(conf_report_dir, report_name)
-    if os.path.exists(output_path):
+    report_name = "report-{}.{}.{}.html".format(log_date[:4],
+                                                log_date[4:6],
+                                                log_date[6:])
+    if os.path.exists(os.path.join(conf_report_dir, report_name)):
         logging.info("Report exists")
         return True
 
@@ -262,8 +294,10 @@ def run_analyzer(conf):
     if data is None:
         return False
 
-    if not write_report(data, output_path):
+    if not write_report(data, conf_report_dir, report_name):
         return False
+
+    return True
 
 
 def read_config(filepath=None):
@@ -274,52 +308,48 @@ def read_config(filepath=None):
     """
     conf = config.copy()
 
-    if filepath:
-        if not os.path.exists(filepath):
-            exit(-1)
+    if not os.path.exists(filepath):
+        exit(-1)
 
-        try:
-            file_data = json.loads(filepath, encoding='utf-8')
-        except json.JSONDecodeError as ex:
-            exit(-1)
-        else:
-            conf.update(file_data)
+    try:
+        with open(filepath) as fp:
+            file_data = json.load(fp)
+    except json.JSONDecodeError:
+        exit(-1)
+    else:
+        conf.update(file_data)
 
     log_file = None
-    if 'LOG_FILE' in conf and conf['LOG_FILE'] is not None:
+    if conf.get('LOG_FILE') is not None:
         log_file = conf['LOG_FILE']
         del conf['LOG_FILE']
+        make_path(log_file)
 
     msgfmt = '[%(asctime)s] %(levelname).1s %(message)s'
     datefmt = '%Y.%m.%d %H:%M:%S'
-    logging.basicConfig(format=msgfmt, datefmt=datefmt, filename=log_file, level=logging.INFO)
+    logging.basicConfig(format=msgfmt, datefmt=datefmt,
+                        filename=log_file, level=logging.INFO)
 
     logging.info('Success: configured')
 
     return conf
 
 
-def main():
-    """
-    Read cmd arguments, setup config, run analyzer
-    """
-    argp = argparse.ArgumentParser(description="Nginx log report handler")
-    argp.add_argument('--config', nargs='?', const='config.json', help='Set config file')
+if __name__ == "__main__":
+    argp = argparse.ArgumentParser(description="Log analyzer")
+    argp.add_argument('--config',
+                      default='config.json',
+                      help='Set config file')
 
     args = vars(argp.parse_args())
+    conf = read_config(args['config'])
 
-    config_file = None
-    if 'config' in args:
-        config_file = args['config']
-
-    conf = read_config(config_file)
-
-    if not run_analyzer(conf):
-        exit(-1)
-
-
-if __name__ == "__main__":
     try:
-        main()
-    except Exception as ex:
+        if not main(conf):
+            exit(-1)
+    except SystemExit as ex:
+        if ex.code != 0:
+            logging.exception("Exit with error")
+            exit(ex.code)
+    except BaseException as ex:
         logging.exception("Caught exception")
