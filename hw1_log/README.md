@@ -25,4 +25,4 @@ Configuration file options:
 * REPORT_DIR - dir path for target reports
 * LOG_DIR - dir path for source log files
 * LOG_FILE - path for file for script logging  (can be null)
-* ERROR_THRESHOLD - threshold of errors, if part unparsed string in source log file will be more than this number, than script exists with error.
+* ERROR_THRESHOLD - threshold of errors, if part unparsed string in source log file will be more than this number, then script exists with error.
