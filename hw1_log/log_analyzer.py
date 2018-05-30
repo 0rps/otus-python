@@ -49,7 +49,7 @@ def write_report(data, report_dir, filename):
                                  template_name)
     if not os.path.exists(template_path):
         logging.error('No template file for report')
-        return False
+        raise Exception()
 
     make_path(report_dir, True)
     report_path = os.path.join(report_dir, filename)
@@ -142,7 +142,7 @@ def process_log(stream, report_size, threshold):
 
     if not_parsed_count / total_count > threshold:
         logging.error("Couldn't parse log file, too much errors")
-        return
+        raise Exception()
 
     msg = "File parsed: lines = {}, success lines = {}, error lines = {}"
     msg = msg.format(total_count,
@@ -283,49 +283,42 @@ def main(cfg):
 
     log_filepath, log_date, log_is_gzip = find_last_log(conf_log_dir)
     if log_filepath is None:
-        return True
+        logging.info("No log file for processing")
+        return
 
     report_name = "report-{}.{}.{}.html".format(log_date[:4],
                                                 log_date[4:6],
                                                 log_date[6:])
     if os.path.exists(os.path.join(conf_report_dir, report_name)):
         logging.info("Report exists")
-        return True
+        return
 
     log_stream = read_log_file(log_filepath, log_is_gzip)
     data = process_log(log_stream, conf_report_size, conf_threshold)
-    if data is None:
-        return False
 
-    if not write_report(data, conf_report_dir, report_name):
-        return False
-
-    return True
+    write_report(data, conf_report_dir, report_name)
 
 
-def read_config(filepath=None):
+def read_config(filepath):
     """
-    Read configuration from file, setup logging
-    :param filepath: Config file
+    Read configuration from file
+    :param filepath: Config file path
     :return: config
     """
     conf = config.copy()
-
-    if not os.path.exists(filepath):
-        exit(-1)
-
-    try:
-        with open(filepath) as fp:
-            file_data = json.load(fp)
-    except json.JSONDecodeError:
-        exit(-1)
-    else:
+    with open(filepath) as fp:
+        file_data = json.load(fp)
         conf.update(file_data)
 
-    log_file = None
-    if conf.get('LOG_FILE') is not None:
-        log_file = conf['LOG_FILE']
-        del conf['LOG_FILE']
+    return conf
+
+
+def configure_logging(log_file=None):
+    """
+    Configure logging
+    :param log_file: output log file
+    """
+    if log_file is not None:
         make_path(log_file)
 
     msgfmt = '[%(asctime)s] %(levelname).1s %(message)s'
@@ -333,9 +326,7 @@ def read_config(filepath=None):
     logging.basicConfig(format=msgfmt, datefmt=datefmt,
                         filename=log_file, level=logging.INFO)
 
-    logging.info('Success: configured')
-
-    return conf
+    logging.info("Success: logging configured")
 
 
 if __name__ == "__main__":
@@ -344,15 +335,15 @@ if __name__ == "__main__":
                       default='config.json',
                       help='Set config file')
 
-    args = vars(argp.parse_args())
-    conf = read_config(args['config'])
+    args = argp.parse_args()
+    configuration = read_config(args.config)
+    configure_logging(configuration['LOG_FILE'])
 
     try:
-        if not main(conf):
-            exit(-1)
+        main(configuration)
     except SystemExit as ex:
         if ex.code != 0:
             logging.exception("Exit with error")
             exit(ex.code)
-    except BaseException as ex:
+    except:
         logging.exception("Caught exception")
