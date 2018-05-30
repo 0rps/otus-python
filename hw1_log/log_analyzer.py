@@ -19,7 +19,8 @@ config = {
 
 ParsedData = namedtuple('ParsedData', ['data', 'total_time', 'total_count'])
 LogFileShortInfo = namedtuple('LogFileShortInfo', ['name', 'date', 'is_gzip'])
-LogFileFullInfo = namedtuple('LogFileShortInfo', ['filepath', 'date', 'is_gzip'])
+LogFileFullInfo = namedtuple('LogFileShortInfo',
+                             ['filepath', 'date', 'is_gzip'])
 
 
 def make_path(filepath):
@@ -28,6 +29,7 @@ def make_path(filepath):
     :param filepath: target file or dir
     :return: None
     """
+    filepath = os.path.abspath(filepath)
     dirname = os.path.dirname(filepath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
@@ -117,13 +119,15 @@ def read_log_file(log_path, threshold, is_gzip):
     if not_parsed_count / total_count > threshold:
         raise Exception("Couldn't parse log file, too much errors")
 
+    parsed_count = total_count - not_parsed_count
     msg = "File parsed: lines = {}, success lines = {}, error lines = {}"
     msg = msg.format(total_count,
-                     total_count - not_parsed_count,
+                     parsed_count,
                      not_parsed_count)
 
     logging.info(msg)
-    return ParsedData(list(data.values()), total_time, total_count - not_parsed_count)
+
+    return ParsedData(list(data.values()), total_time, parsed_count)
 
 
 def process_data(parsed_data, report_size):
@@ -321,5 +325,5 @@ if __name__ == "__main__":
         if ex.code != 0:
             logging.exception("Exit with error")
             exit(ex.code)
-    except:
+    except BaseException:
         logging.exception("Caught exception")

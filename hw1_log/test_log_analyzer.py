@@ -43,6 +43,16 @@ class TestLogAnalyzer(unittest.TestCase):
         self.assertEqual(last_log.date, datetime(year=2018, month=2, day=27))
         self.assertTrue(last_log.is_gzip)
 
+        result_file = 'nginx-access-ui.log-20190227'
+        log_list = ['nginx-access-ui.log-20180224.gz',
+                    result_file,
+                    'nginx-access-ui.log-20180225']
+        regex = logan.log_filename_regex()
+
+        last_log = logan.find_last_log_from_list(regex, log_list)
+        self.assertEqual(last_log.name, result_file)
+
+
     def test_regex_message(self):
         """
         Check message regex correctness
