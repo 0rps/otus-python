@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 import log_analyzer as logan
 
 
@@ -37,8 +38,10 @@ class TestLogAnalyzer(unittest.TestCase):
                     'nginx-access-ui.log-20180225']
         regex = logan.log_filename_regex()
 
-        self.assertEqual(logan.find_last_log_from_list(regex, log_list),
-                         result_file)
+        last_log = logan.find_last_log_from_list(regex, log_list)
+        self.assertEqual(last_log.name, result_file)
+        self.assertEqual(last_log.date, datetime(year=2018, month=2, day=27))
+        self.assertTrue(last_log.is_gzip)
 
     def test_regex_message(self):
         """
@@ -75,43 +78,16 @@ class TestLogAnalyzer(unittest.TestCase):
         """
         Test log processing operations
         """
-        log_lines = [
-            '1.169.137.128 -  - [29/Jun/2017:03:50:23 +0300] '
-            '"GET /api/v1 HTTP/1.1" '
-            '200 1018 "-" "Configovod" "-" '
-            '"1498697422-2118016444-4708-9752774" "712e90144abee9" 0.1',
-
-            '1.169.137.128 -  - [29/Jun/2017:03:50:23 +0300] '
-            '"GET /api/v2 HTTP/1.1" '
-            '200 1018 "-" "Configovod" "-" '
-            '"1498697422-2118016444-4708-9752774" "712e90144abee9" 0.25',
-
-            '1.169.137.128 -  - [29/Jun/2017:03:50:23 +0300] '
-            '"GET /api/v1 HTTP/1.1" '
-            '200 1018 "-" "Configovod" "-" '
-            '"1498697422-2118016444-4708-9752774" "712e90144abee9" 0.3',
-
-            '1.169.137.128 -  - [29/Jun/2017:03:50:23 +0300] '
-            '"GET /api/v2 HTTP/1.1" '
-            '200 1018 "-" "Configovod" "-" '
-            '"1498697422-2118016444-4708-9752774" "712e90144abee9" 0.1',
-
-            '1.169.137.128 -  - [29/Jun/2017:03:50:23 +0300] '
-            '"GET /api/v3 HTTP/1.1" '
-            '200 1018 "-" "Configovod" "-" '
-            '"1498697422-2118016444-4708-9752774" "712e90144abee9" 0.125',
-
-            '1.169.137.128 -  - [29/Jun/2017:03:50:23 +0300] '
-            '"GET /api/v2 HTTP/1.1" '
-            '200 1018 "-" "Configovod" "-" '
-            '"1498697422-2118016444-4708-9752774" "712e90144abee9" 0.5',
+        data = [
+            {'url': '/v1', 'times': [1, 1, 1], 'time_sum': 3},
+            {'url': '/v2', 'times': [2, 1, 3], 'time_sum': 6},
+            {'url': '/v3', 'times': [1, 0.5, 0.5, 0.5, 1.5], 'time_sum': 4},
         ]
-
-        data = logan.process_log(log_lines, 2, 0.1)
+        data = logan.ParsedData(data, 13, 11)
+        data = logan.process_data(data, 2)
         self.assertEqual(len(data), 2)
-        self.assertEqual(data[1]['url'], '/api/v1')
-        self.assertAlmostEqual(data[0]['time_sum'], 0.85)
-        self.assertAlmostEqual(data[0]['time_med'], 0.25)
+        self.assertEqual(data[0]['url'], '/v2')
+        self.assertAlmostEqual(data[0]['time_med'], 2)
 
 
 if __name__ == '__main__':
