@@ -4,7 +4,7 @@
 from functools import update_wrapper
 
 
-def disable():
+def disable(func):
     '''
     Disable a decorator by re-assigning the decorator's name
     to this function. For example, to turn off memoization:
@@ -12,39 +12,72 @@ def disable():
     >>> memo = disable
 
     '''
-    return
+
+    return func
 
 
-def decorator():
+def decorator(wrapped):
     '''
     Decorate a decorator so that it inherits the docstrings
     and stuff from the function it's decorating.
     '''
-    return
+
+    def internal_decorator(wrapper):
+        update_wrapper(wrapper, wrapped)
+        return wrapper
+
+    return internal_decorator
 
 
-def countcalls():
+def countcalls(func):
     '''Decorator that counts calls made to the function decorated.'''
-    return
+
+    @decorator(func)
+    def wrapped(*args, **kwargs):
+        wrapped.calls += 1
+        return func(*args, **kwargs)
+    wrapped.calls = 0
+    return wrapped
 
 
-def memo():
+def memo(func):
     '''
     Memoize a function so that it caches all return values for
     faster future lookups.
     '''
-    return
+    memory = {}
+
+    @decorator(func)
+    def wrapped(*args):
+        nonlocal memory
+        if args in memory:
+            return memory[args]
+
+        result = func(*args)
+        memory[args] = result
+        return result
+
+    return wrapped
 
 
-def n_ary():
+def n_ary(func):
     '''
     Given binary function f(x, y), return an n_ary function such
     that f(x, y, z) = f(x, f(y,z)), etc. Also allow f(x) = x.
     '''
-    return
+
+    @decorator(func)
+    def wrapped(*args):
+        length = len(args)
+        if length == 1:
+            return args[0]
+        elif length > 1:
+            return func(args[0], wrapped(*args[1:]))
+
+    return wrapped
 
 
-def trace():
+def trace(indent_step):
     '''Trace calls made to function decorated.
 
     @trace("____")
@@ -64,11 +97,32 @@ def trace():
      <-- fib(3) == 3
 
     '''
-    return
+
+    def internal_decorator(func):
+        indent = ''
+
+        @decorator(func)
+        def wrapped(*args, **kwargs):
+            nonlocal indent
+            old_indent = indent
+            indent += indent_step
+
+            func_args = ", ".join(map(lambda x: str(x), args))
+            func_call = "{}({})".format(func.__name__, func_args)
+
+            print("{} --> {}".format(indent, func_call))
+            result = func(*args, **kwargs)
+            print("{} <-- {} == {}".format(indent, func_call, result))
+
+            indent = old_indent
+            return result
+
+        return wrapped
+    return internal_decorator
 
 
-@memo
 @countcalls
+@memo
 @n_ary
 def foo(a, b):
     return a + b
@@ -90,19 +144,19 @@ def fib(n):
 
 
 def main():
-    print foo(4, 3)
-    print foo(4, 3, 2)
-    print foo(4, 3)
-    print "foo was called", foo.calls, "times"
+    print(foo(4, 3))
+    print(foo(4, 3, 2))
+    print(foo(4, 3))
+    print("foo was called", foo.calls, "times")
 
-    print bar(4, 3)
-    print bar(4, 3, 2)
-    print bar(4, 3, 2, 1)
-    print "bar was called", bar.calls, "times"
+    print(bar(4, 3))
+    print(bar(4, 3, 2))
+    print(bar(4, 3, 2, 1))
+    print("bar was called", bar.calls, "times")
 
-    print fib.__doc__
+    print(fib.__doc__)
     fib(3)
-    print fib.calls, 'calls made'
+    print(fib.calls, 'calls made')
 
 
 if __name__ == '__main__':
