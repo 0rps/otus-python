@@ -107,7 +107,7 @@ def trace(indent_step):
             old_indent = indent
             indent += indent_step
 
-            func_args = ", ".join(map(lambda x: str(x), args))
+            func_args = ", ".join([str(x) for x in args])
             func_call = "{}({})".format(func.__name__, func_args)
 
             print("{} --> {}".format(indent, func_call))
