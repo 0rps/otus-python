@@ -27,6 +27,16 @@
 # Можно свободно определять свои функции и т.п.
 # -----------------
 
+from itertools import groupby, combinations
+
+
+def ll(iterable):
+    return len(list(iterable))
+
+
+def all_equals(iterable):
+    return ll(groupby(iterable)) == 1
+
 
 def hand_rank(hand):
     """Возвращает значение определяющее ранг 'руки'"""
@@ -54,62 +64,97 @@ def hand_rank(hand):
 def card_ranks(hand):
     """Возвращает список рангов (его числовой эквивалент),
     отсортированный от большего к меньшему"""
-    return
+    total = '23456789TJQKA'
+    return sorted([total.index(x[0]) for x in hand])
 
 
 def flush(hand):
     """Возвращает True, если все карты одной масти"""
-    return
+    groups = groupby(hand, lambda x: x[1])
+    return ll(groups) == 1
 
 
 def straight(ranks):
     """Возвращает True, если отсортированные ранги формируют последовательность 5ти,
     где у 5ти карт ранги идут по порядку (стрит)"""
-    return
+    equals = [x + y for x, y in zip(ranks, range(0, 5))]
+    if all_equals(equals):
+        return True
 
 
 def kind(n, ranks):
     """Возвращает первый ранг, который n раз встречается в данной руке.
     Возвращает None, если ничего не найдено"""
-    return
+    for rank, group in groupby(ranks):
+        if ll(group) == n:
+            return rank
 
 
 def two_pair(ranks):
     """Если есть две пары, то возврщает два соответствующих ранга,
     иначе возвращает None"""
-    return
+    grouped = groupby(ranks)
+    filtered = [rk for rk, gp in grouped if len(list(gp)) == 2]
+    result = filtered[:2] if len(filtered) > 1 else None
+    return result
 
 
 def best_hand(hand):
     """Из "руки" в 7 карт возвращает лучшую "руку" в 5 карт """
-    return
+    bhand = hand[:5]
+    brank = hand_rank(bhand)
+
+    for cur_hand in combinations(hand, 5):
+        cur_rank = hand_rank(cur_hand)
+        is_best = False
+        if cur_rank[0] > brank[0]:
+            is_best = True
+        elif cur_rank[0] == brank[0]:
+            for x, y in zip(cur_rank, brank):
+                if x == y:
+                    continue
+                is_best = x > y
+                break
+
+        if is_best:
+            brank = cur_rank
+            bhand = cur_hand
+
+    return bhand
 
 
-def best_wild_hand(hand):
+def best_wild_hand(start_hand):
+    jokers = [x for x in start_hand if '?' in x]
+    jokers_count = len(jokers)
+    hand = [x for x in start_hand if x not in jokers]
+    if jokers_count == 0:
+        return best_hand(hand)
+
     """best_hand но с джокерами"""
     return
 
 
 def test_best_hand():
-    print "test_best_hand..."
+    print("test_best_hand...")
     assert (sorted(best_hand("6C 7C 8C 9C TC 5C JS".split()))
             == ['6C', '7C', '8C', '9C', 'TC'])
     assert (sorted(best_hand("TD TC TH 7C 7D 8C 8S".split()))
             == ['8C', '8S', 'TC', 'TD', 'TH'])
     assert (sorted(best_hand("JD TC TH 7C 7D 7S 7H".split()))
             == ['7C', '7D', '7H', '7S', 'JD'])
-    print 'OK'
+    print('OK')
 
 
 def test_best_wild_hand():
-    print "test_best_wild_hand..."
+    print("test_best_wild_hand...")
     assert (sorted(best_wild_hand("6C 7C 8C 9C TC 5C ?B".split()))
             == ['7C', '8C', '9C', 'JC', 'TC'])
     assert (sorted(best_wild_hand("TD TC 5H 5C 7C ?R ?B".split()))
             == ['7C', 'TC', 'TD', 'TH', 'TS'])
     assert (sorted(best_wild_hand("JD TC TH 7C 7D 7S 7H".split()))
             == ['7C', '7D', '7H', '7S', 'JD'])
-    print 'OK'
+    print('OK')
+
 
 if __name__ == '__main__':
     test_best_hand()
