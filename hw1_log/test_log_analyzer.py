@@ -1,4 +1,5 @@
 import unittest
+import itertools as it
 from datetime import datetime
 import log_analyzer as logan
 
@@ -52,12 +53,11 @@ class TestLogAnalyzer(unittest.TestCase):
         last_log = logan.find_last_log_from_list(log_list)
         self.assertEqual(last_log.name, result_file)
 
-    def test_regex_message(self):
+    def test_parse_log_line(self):
         """
-        Check message regex correctness
+        Check log line parsing
         """
 
-        regex = logan.log_line_regex
         a1 = '1.169.137.128 -  - [29/Jun/2017:03:50:23 +0300] ' \
              '"GET /api/v2/banner/7763463 HTTP/1.1" 200 1018 "-"' \
              ' "Configovod" "-" "1498697422-2118016444-4708-9752774"' \
@@ -73,16 +73,40 @@ class TestLogAnalyzer(unittest.TestCase):
              ' "Configovod" "-" "1498697422-2118016444-4708-9752774" ' \
              '"712e90144abee9"0.181'
 
-        match = regex.match(a1)
-        self.assertNotEqual(match, None)
-        self.assertEqual(match.group('url'), '/api/v2/banner/7763463')
-        self.assertEqual(match.group('time'), '0.181')
+        request = logan.parse_log_line(a1)
+        self.assertNotEqual(request, None)
+        self.assertEqual(request.url, '/api/v2/banner/7763463')
+        self.assertAlmostEqual(request.time, 0.181)
 
-        match = regex.match(a2)
-        self.assertEqual(match, None)
+        self.assertEqual(logan.parse_log_line(a2), None)
+        self.assertEqual(logan.parse_log_line(a3), None)
 
-        match = regex.match(a3)
-        self.assertEqual(match, None)
+    def test_process_log_stream(self):
+        stream = [logan.RequestInfo('/v1', 0.1),
+                  logan.RequestInfo('/v2', 0.2),
+                  logan.RequestInfo('/v2', 0.3),
+                  logan.RequestInfo('/v3', 0.4),
+                  logan.RequestInfo('/v1', 0.2),
+                  None]
+
+        data = logan.process_log_stream(stream, 0.5)
+        self.assertEqual(data.total_count, 5)
+        self.assertEqual(len(data.data), 3)
+
+        internal_data = sorted(data.data, key=lambda x: x['url'])
+        self.assertEqual(internal_data[0]['url'], '/v1')
+        self.assertEqual(len(internal_data[0]['times']), 2)
+        self.assertAlmostEqual(internal_data[0]['time_sum'], 0.3)
+
+    def test_process_log_stream_threshold(self):
+        stream = [logan.RequestInfo('/v1', 0.1),
+                  None, None]
+        error = False
+        try:
+            logan.process_log_stream(stream, 0.6)
+        except Exception:
+            error = True
+        self.assertTrue(error)
 
     def test_process_log(self):
         """
@@ -96,9 +120,23 @@ class TestLogAnalyzer(unittest.TestCase):
         ]
         data = logan.ParsedData(data, 13, 11)
         data = logan.process_data(data, 2)
+
         self.assertEqual(len(data), 2)
-        self.assertEqual(data[0]['url'], '/v2')
-        self.assertAlmostEqual(data[0]['time_med'], 2)
+
+        row = data[0]
+        self.assertEqual(row['url'], '/v2')
+        self.assertAlmostEqual(row['time_med'], 2)
+        self.assertEqual(row['count'], 3)
+
+        res = round(3 * 100 / 11, 3)
+        self.assertAlmostEqual(row['count_perc'], res)
+
+        res = round(6 * 100 / 13, 3)
+        self.assertAlmostEqual(row['time_perc'], res)
+
+        self.assertAlmostEqual(row['time_max'], 3)
+        self.assertAlmostEqual(row['time_avg'], 2)
+        self.assertAlmostEqual(row['time_sum'], 6)
 
 
 if __name__ == '__main__':

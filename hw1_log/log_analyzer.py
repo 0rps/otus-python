@@ -82,6 +82,11 @@ def write_report(data, report_path):
 
 
 def parse_log_line(log_line):
+    """
+    Parse log line
+    :param log_line: text string
+    :return: RequestInfo
+    """
     match = log_line_regex.match(log_line)
     if match:
         url, time = match.group('url'), float(match.group('time'))
