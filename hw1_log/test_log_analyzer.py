@@ -9,7 +9,8 @@ class TestLogAnalyzer(unittest.TestCase):
         """
         Check filename regex correctness
         """
-        regex = logan.log_filename_regex()
+
+        regex = logan.log_filename_regex
         match = regex.match("nginx-access-ui.log-11112233.gz1")
         self.assertEqual(match, None)
         match = regex.match("nginx-access-ui.log-111122334")
@@ -31,14 +32,14 @@ class TestLogAnalyzer(unittest.TestCase):
         """
         Test search log
         """
+
         result_file = 'nginx-access-ui.log-20180227.gz'
         log_list = ['nginx-access-ui.log-20201521',
                     'nginx-access-ui.log-20180224.gz',
                     result_file,
                     'nginx-access-ui.log-20180225']
-        regex = logan.log_filename_regex()
 
-        last_log = logan.find_last_log_from_list(regex, log_list)
+        last_log = logan.find_last_log_from_list(log_list)
         self.assertEqual(last_log.name, result_file)
         self.assertEqual(last_log.date, datetime(year=2018, month=2, day=27))
         self.assertTrue(last_log.is_gzip)
@@ -47,17 +48,16 @@ class TestLogAnalyzer(unittest.TestCase):
         log_list = ['nginx-access-ui.log-20180224.gz',
                     result_file,
                     'nginx-access-ui.log-20180225']
-        regex = logan.log_filename_regex()
 
-        last_log = logan.find_last_log_from_list(regex, log_list)
+        last_log = logan.find_last_log_from_list(log_list)
         self.assertEqual(last_log.name, result_file)
-
 
     def test_regex_message(self):
         """
         Check message regex correctness
         """
-        regex = logan.log_line_regex()
+
+        regex = logan.log_line_regex
         a1 = '1.169.137.128 -  - [29/Jun/2017:03:50:23 +0300] ' \
              '"GET /api/v2/banner/7763463 HTTP/1.1" 200 1018 "-"' \
              ' "Configovod" "-" "1498697422-2118016444-4708-9752774"' \
@@ -88,6 +88,7 @@ class TestLogAnalyzer(unittest.TestCase):
         """
         Test log processing operations
         """
+
         data = [
             {'url': '/v1', 'times': [1, 1, 1], 'time_sum': 3},
             {'url': '/v2', 'times': [2, 1, 3], 'time_sum': 6},

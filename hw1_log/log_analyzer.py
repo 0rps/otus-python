@@ -19,8 +19,16 @@ config = {
 
 ParsedData = namedtuple('ParsedData', ['data', 'total_time', 'total_count'])
 LogFileShortInfo = namedtuple('LogFileShortInfo', ['name', 'date', 'is_gzip'])
-LogFileFullInfo = namedtuple('LogFileShortInfo',
-                             ['filepath', 'date', 'is_gzip'])
+
+log_line_regex = re.compile(r'[^\"]+'
+                            r'\"'
+                            r'\w+\s(?P<url>[^\s]+)\s[^\"]+'
+                            r'\"'
+                            r'(?:.|\s)+\s'
+                            r'(?P<time>\d+\.\d+)')
+
+log_filename_regex = re.compile(r'nginx-access-ui\.log-'
+                                r'(?P<date>\d{8})(?P<ext>(?:\.gz)?)$')
 
 
 def make_path(filepath):
@@ -68,21 +76,6 @@ def write_report(data, report_path):
     logging.info("Success: report generated: {}".format(report_path))
 
 
-def log_line_regex():
-    """
-    Regex for log line parsing
-    :return: regex
-    """
-    regex = re.compile(r'[^\"]+'
-                       r'\"'
-                       r'\w+\s(?P<url>[^\s]+)\s[^\"]+'
-                       r'\"'
-                       r'(?:.|\s)+\s'
-                       r'(?P<time>\d+\.\d+)')
-
-    return regex
-
-
 def read_log_file(log_path, threshold, is_gzip):
     """
     Read and parse log file
@@ -93,7 +86,6 @@ def read_log_file(log_path, threshold, is_gzip):
     """
     logging.info("Trying to read and parse nginx log file")
     data = defaultdict(lambda: {'time_sum': 0.0, 'times': []})
-    regex = log_line_regex()
 
     not_parsed_count = 0
     total_count = 0
@@ -101,9 +93,8 @@ def read_log_file(log_path, threshold, is_gzip):
 
     open_func = gzip.open if is_gzip else open
 
-    for log_line in open_func(log_path, mode='rb'):
-        log_line = log_line.decode('utf-8')
-        match = regex.match(log_line)
+    for log_line in open_func(log_path, mode='rt', encoding='utf-8'):
+        match = log_line_regex.match(log_line)
         if match is None:
             not_parsed_count += 1
         else:
@@ -180,16 +171,6 @@ def process_data(parsed_data, report_size):
     return data
 
 
-def log_filename_regex():
-    """
-    Regex for log filename
-    :return: regex
-    """
-    regex = re.compile(r'nginx-access-ui\.log-'
-                       r'(?P<date>\d{8})(?P<ext>(?:\.gz)?)$')
-    return regex
-
-
 def parse_date(date_str):
     """
     Parse date from string YYYYMMdd
@@ -204,7 +185,7 @@ def parse_date(date_str):
     return date
 
 
-def find_last_log_from_list(regex, log_dir_iter):
+def find_last_log_from_list(log_dir_iter):
     """
     Find last log file
     :param regex: compiled filename regex
@@ -215,7 +196,7 @@ def find_last_log_from_list(regex, log_dir_iter):
     res_date = None
 
     for file in log_dir_iter:
-        match = regex.match(file)
+        match = log_filename_regex.match(file)
         if match:
             cur_date = parse_date(match.group('date'))
             if cur_date is None:
@@ -241,17 +222,14 @@ def find_last_log(log_dir):
     """
     logging.info("Trying to find last nginx log file")
 
-    regex = log_filename_regex()
-    file_info = find_last_log_from_list(regex, os.listdir(log_dir))
+    file_info = find_last_log_from_list(os.listdir(log_dir))
 
     if file_info is None:
         logging.info("No nginx log file found")
         return
 
-    filepath = os.path.join(log_dir, file_info.name)
-
     logging.info("Success: last nginx log file {}".format(file_info.name))
-    return LogFileFullInfo(filepath, file_info.date, file_info.is_gzip)
+    return file_info
 
 
 def main(cfg):
@@ -271,7 +249,8 @@ def main(cfg):
         logging.info("Report exists")
         return
 
-    data = read_log_file(log_info.filepath,
+    log_filepath = os.path.join(cfg['LOG_DIR'], log_info.name)
+    data = read_log_file(log_filepath,
                          cfg['ERROR_THRESHOLD'],
                          log_info.is_gzip)
 
@@ -321,9 +300,5 @@ if __name__ == "__main__":
 
     try:
         main(configuration)
-    except SystemExit as ex:
-        if ex.code != 0:
-            logging.exception("Exit with error")
-            exit(ex.code)
     except BaseException:
         logging.exception("Caught exception")
