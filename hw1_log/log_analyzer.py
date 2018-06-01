@@ -5,6 +5,8 @@ import json
 import gzip
 import argparse
 import logging
+import shutil
+import uuid
 from datetime import datetime
 from string import Template
 from collections import defaultdict, namedtuple
@@ -17,6 +19,7 @@ config = {
     "LOG_FILE": None
 }
 
+RequestInfo = namedtuple('RequestInfo', ['url', 'time'])
 ParsedData = namedtuple('ParsedData', ['data', 'total_time', 'total_count'])
 LogFileShortInfo = namedtuple('LogFileShortInfo', ['name', 'date', 'is_gzip'])
 
@@ -70,55 +73,71 @@ def write_report(data, report_path):
     json_data = json.dumps(data)
     report = template.safe_substitute(table_json=json_data)
 
-    with open(report_path, 'w') as target:
+    tmp_report = report_path + '.' + uuid.uuid4().hex + '.tmp'
+    with open(tmp_report, 'w') as target:
         target.write(report)
 
+    shutil.move(tmp_report, report_path)
     logging.info("Success: report generated: {}".format(report_path))
 
 
-def read_log_file(log_path, threshold, is_gzip):
+def parse_log_line(log_line):
+    match = log_line_regex.match(log_line)
+    if match:
+        url, time = match.group('url'), float(match.group('time'))
+        return RequestInfo(url, time)
+
+
+def read_log_file(log_path, is_gzip):
     """
-    Read and parse log file
-    :param log_path: log file path
-    :param threshold: error threshold
-    :param is_gzip: Is gzipped
+    Real log file, yield line by line
+    :param log_path: Log file path
+    :param is_gzip: Is gzipped:
     :return:
     """
-    logging.info("Trying to read and parse nginx log file")
+    open_func = gzip.open if is_gzip else open
+    for log_line in open_func(log_path, mode='rt', encoding='utf-8'):
+        yield parse_log_line(log_line)
+
+
+def process_log_stream(stream, threshold):
+    """
+    Parse log stream
+    :param stream: log stream
+    :param threshold: error threshold
+    :return: parsed log info
+    """
+    logging.info("Trying to parse nginx log stream")
     data = defaultdict(lambda: {'time_sum': 0.0, 'times': []})
 
-    not_parsed_count = 0
+    invalid_count = 0
     total_count = 0
     total_time = 0
 
-    open_func = gzip.open if is_gzip else open
-
-    for log_line in open_func(log_path, mode='rt', encoding='utf-8'):
-        match = log_line_regex.match(log_line)
-        if match is None:
-            not_parsed_count += 1
-        else:
-            url, time = match.group('url'), float(match.group('time'))
-            url_data = data[match.group('url')]
-            url_data['url'] = url
-            url_data['times'].append(time)
-            url_data['time_sum'] += time
-            total_time += time
+    for request in stream:
 
         total_count += 1
+        if request is None:
+            invalid_count += 1
+        else:
+            url_data = data[request.url]
+            url_data['url'] = request.url
+            url_data['time_sum'] += request.time
+            url_data['times'].append(request.time)
+            total_time += request.time
 
-    if not_parsed_count / total_count > threshold:
-        raise Exception("Couldn't parse log file, too much errors")
+    if invalid_count / total_count > threshold:
+        raise Exception("Couldn't parse log stream, too much errors")
 
-    parsed_count = total_count - not_parsed_count
-    msg = "File parsed: lines = {}, success lines = {}, error lines = {}"
+    valid_count = total_count - invalid_count
+    msg = "Stream parsed: lines = {}, success lines = {}, error lines = {}"
     msg = msg.format(total_count,
-                     parsed_count,
-                     not_parsed_count)
+                     valid_count,
+                     invalid_count)
 
     logging.info(msg)
 
-    return ParsedData(list(data.values()), total_time, parsed_count)
+    return ParsedData(list(data.values()), total_time, valid_count)
 
 
 def process_data(parsed_data, report_size):
@@ -250,9 +269,8 @@ def main(cfg):
         return
 
     log_filepath = os.path.join(cfg['LOG_DIR'], log_info.name)
-    data = read_log_file(log_filepath,
-                         cfg['ERROR_THRESHOLD'],
-                         log_info.is_gzip)
+    log_stream = read_log_file(log_filepath, log_info.is_gzip)
+    data = process_log_stream(log_stream, cfg['ERROR_THRESHOLD'])
 
     data = process_data(data, cfg['REPORT_SIZE'])
     write_report(data, report_path)
