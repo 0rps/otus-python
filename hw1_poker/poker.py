@@ -77,7 +77,7 @@ def flush(hand):
 def straight(ranks):
     """Возвращает True, если отсортированные ранги формируют последовательность 5ти,
     где у 5ти карт ранги идут по порядку (стрит)"""
-    total = '.'.join([str(x) for x in reversed(range(15))])
+    total = '.'.join([str(x) for x in reversed(range(2, 15))])
     return '.'.join([str(x) for x in ranks]) in total
 
 
@@ -121,7 +121,38 @@ def best_hand(hand):
     return bhand
 
 
+def color(kind):
+    if kind == 'C' or kind == 'S':
+        return 'B'
+    return 'R'
+
+
+def wild_street(hand):
+    pass
+
+
+def wild_n(n, ranks, j_count):
+    n = n - j_count
+    for rank, group in groupby(ranks):
+        if ll(group) >= n:
+            return rank
+
+
+def wild_flush(hand, jokers):
+    groups = groupby(hand, lambda x: x[1])
+    return ll(groups) == 1 and len(jokers) == 1 and color(hand[0][1]) == jokers[0][1]
+
+
+def wild_full_house(ranks, hand, jokers):
+    if len(jokers) == 2:
+        kind(3,)
+
 def best_wild_hand_one_joker(hand, j_color):
+    bhand = None
+    brank = None
+
+
+
     return None, None
 
 
