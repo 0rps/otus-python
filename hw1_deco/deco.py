@@ -25,6 +25,7 @@ def decorator(wrapped):
     def internal_decorator(wrapper):
         update_wrapper(wrapper, wrapped)
         return wrapper
+    update_wrapper(internal_decorator, decorator)
 
     return internal_decorator
 
@@ -33,11 +34,11 @@ def countcalls(func):
     '''Decorator that counts calls made to the function decorated.'''
 
     @decorator(func)
-    def wrapped(*args, **kwargs):
-        wrapped.calls += 1
+    def wrapper(*args, **kwargs):
+        wrapper.calls += 1
         return func(*args, **kwargs)
-    wrapped.calls = 0
-    return wrapped
+    wrapper.calls = 0
+    return wrapper
 
 
 def memo(func):
@@ -48,7 +49,7 @@ def memo(func):
     memory = {}
 
     @decorator(func)
-    def wrapped(*args):
+    def wrapper(*args):
         nonlocal memory
         if args in memory:
             return memory[args]
@@ -57,7 +58,7 @@ def memo(func):
         memory[args] = result
         return result
 
-    return wrapped
+    return wrapper
 
 
 def n_ary(func):
@@ -67,14 +68,10 @@ def n_ary(func):
     '''
 
     @decorator(func)
-    def wrapped(*args):
-        length = len(args)
-        if length == 1:
-            return args[0]
-        elif length > 1:
-            return func(args[0], wrapped(*args[1:]))
+    def wrapper(*args):
+        return args[0] if len(args) == 1 else func(args[0], wrapper(*args[1:]))
 
-    return wrapped
+    return wrapper
 
 
 def trace(indent_step):
@@ -98,11 +95,12 @@ def trace(indent_step):
 
     '''
 
+    @decorator(trace)
     def internal_decorator(func):
         indent = ''
 
         @decorator(func)
-        def wrapped(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             nonlocal indent
             old_indent = indent
             indent += indent_step
@@ -117,7 +115,7 @@ def trace(indent_step):
             indent = old_indent
             return result
 
-        return wrapped
+        return wrapper
     return internal_decorator
 
 
