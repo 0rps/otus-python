@@ -65,7 +65,7 @@ def card_ranks(hand):
     """Возвращает список рангов (его числовой эквивалент),
     отсортированный от большего к меньшему"""
     total = '23456789TJQKA'
-    return sorted([total.index(x[0]) for x in hand])
+    return sorted([total.index(x[0]) for x in hand], reverse=True)
 
 
 def flush(hand):
@@ -77,9 +77,8 @@ def flush(hand):
 def straight(ranks):
     """Возвращает True, если отсортированные ранги формируют последовательность 5ти,
     где у 5ти карт ранги идут по порядку (стрит)"""
-    equals = [x + y for x, y in zip(ranks, range(0, 5))]
-    if all_equals(equals):
-        return True
+    total = '.'.join([str(x) for x in reversed(range(15))])
+    return '.'.join([str(x) for x in ranks]) in total
 
 
 def kind(n, ranks):
@@ -99,6 +98,15 @@ def two_pair(ranks):
     return result
 
 
+def is_better_rank(a, b):
+    is_better = False
+    for x, y in zip(a, b):
+        if x == y:
+            continue
+        is_better = x > y
+    return is_better
+
+
 def best_hand(hand):
     """Из "руки" в 7 карт возвращает лучшую "руку" в 5 карт """
     bhand = hand[:5]
@@ -106,32 +114,45 @@ def best_hand(hand):
 
     for cur_hand in combinations(hand, 5):
         cur_rank = hand_rank(cur_hand)
-        is_best = False
-        if cur_rank[0] > brank[0]:
-            is_best = True
-        elif cur_rank[0] == brank[0]:
-            for x, y in zip(cur_rank, brank):
-                if x == y:
-                    continue
-                is_best = x > y
-                break
-
-        if is_best:
+        if is_better_rank(cur_rank, brank):
             brank = cur_rank
             bhand = cur_hand
 
     return bhand
 
 
+def best_wild_hand_one_joker(hand, j_color):
+    return None, None
+
+
+def best_wild_hand_two_joker(hand):
+    return None, None
+
+
 def best_wild_hand(start_hand):
     jokers = [x for x in start_hand if '?' in x]
-    jokers_count = len(jokers)
     hand = [x for x in start_hand if x not in jokers]
-    if jokers_count == 0:
-        return best_hand(hand)
+
+    bhand = best_hand(hand)
+    brank = hand_rank(bhand)
+
+    if len(jokers) == 0:
+        return bhand
+
+    for cur_hand in combinations(hand, 5):
+        for joker in jokers:
+            joker_bhand, jocker_brank = best_wild_hand_one_joker(cur_hand, joker)
+            if is_better_rank(jocker_brank, brank):
+                brank = jocker_brank
+                bhand = joker_bhand
+
+    if len(jokers) == 2:
+        joker_bhand, jocker_brank = best_wild_hand_two_joker(hand)
+        if is_better_rank(jocker_brank, brank):
+            bhand = joker_bhand
 
     """best_hand но с джокерами"""
-    return
+    return bhand
 
 
 def test_best_hand():
