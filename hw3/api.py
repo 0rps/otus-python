@@ -258,8 +258,16 @@ class ClientsInterestsRequest(Request):
         return True
 
     @staticmethod
-    def handle(request, ctx):
-        pass
+    def handle(request, ctx, store):
+        method = ClientsInterestsRequest(request.arguments)
+
+        if not method.is_valid():
+            errors = method.errors()
+            return ';'.join(errors), INVALID_REQUEST
+
+        ctx['nclients'] = len(method.client_ids)
+        response = {cid: scoring.get_interests(store, cid) for cid in method.client_ids}
+        return response, OK
 
 
 class OnlineScoreRequest(Request):
@@ -307,7 +315,7 @@ class MethodRequest(Request):
     method = CharField(required=True, nullable=False)
 
     def validate(self):
-        return True
+        pass
 
     @property
     def is_admin(self):
@@ -327,7 +335,7 @@ def check_auth(request):
 def method_handler(request, ctx, store):
     router = {
         'online_score': OnlineScoreRequest,
-        'client_interests': ClientsInterestsRequest
+        'clients_interests': ClientsInterestsRequest
     }
 
     body = request['body']
