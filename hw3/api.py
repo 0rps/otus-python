@@ -377,11 +377,11 @@ class MethodRequest(Request):
 
 def check_auth(request):
     if request.is_admin:
-        digest = hashlib.sha512((datetime.datetime.now().strftime("%Y%m%d%H")
-                                 + ADMIN_SALT).encode('utf-8')).hexdigest()
+        digest = hashlib.sha512((datetime.datetime.now().strftime("%Y%m%d%H") +
+                                 ADMIN_SALT).encode('utf-8')).hexdigest()
     else:
-        digest = hashlib.sha512((request.account + request.login
-                                 + SALT).encode('utf-8')).hexdigest()
+        digest = hashlib.sha512((request.account + request.login +
+                                 SALT).encode('utf-8')).hexdigest()
     if digest == request.token:
         return True
     return False
