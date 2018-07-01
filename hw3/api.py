@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 from abc import ABC, abstractclassmethod, ABCMeta
 import json
@@ -321,7 +320,10 @@ class OnlineScoreRequest(Request):
             return ';'.join(errors), INVALID_REQUEST
 
         clean_data = method.clean_data()
-        ctx['has'] = [key for key, value in clean_data.items() if value]
+        ctx['has'] = []
+        for key, value in clean_data.items():
+            if value is not None:
+                ctx['has'].append(key)
 
         if request.is_admin:
             logging.info('Admin in online_score: returning 42')
@@ -433,7 +435,6 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
         context.update(r)
         logging.info(context)
         self.wfile.write(json.dumps(r))
-        return
 
 
 if __name__ == "__main__":
