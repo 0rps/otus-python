@@ -404,8 +404,9 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
         request = None
         try:
             data_string = self.rfile.read(int(self.headers['Content-Length']))
-            request = json.loads(data_string)
-        except Exception:
+            request = json.loads(data_string.decode('utf-8'))
+        except Exception as e:
+            logging.error('Couldn\'t parse request json')
             code = BAD_REQUEST
 
         if request:
@@ -434,7 +435,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
             r = {"error": error, "code": code}
         context.update(r)
         logging.info(context)
-        self.wfile.write(json.dumps(r))
+        self.wfile.write(json.dumps(r).encode('utf-8'))
 
 
 if __name__ == "__main__":
