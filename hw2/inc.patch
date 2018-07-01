@@ -1,0 +1,126 @@
+From fde2c6de070bbec38b93bb6ae867da55e38ecdcb Mon Sep 17 00:00:00 2001
+From: MogilnikovAB <tuxrps@gmail.com>
+Date: Sat, 9 Jun 2018 12:29:50 +0300
+Subject: [PATCH] [add] incr
+
+---
+ Grammar/Grammar    |  4 +++-
+ Include/token.h    |  3 ++-
+ Parser/tokenizer.c |  6 +++++-
+ Python/ast.c       | 40 ++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 50 insertions(+), 3 deletions(-)
+
+diff --git a/Grammar/Grammar b/Grammar/Grammar
+index 4c3f33d..7ace445 100644
+--- a/Grammar/Grammar
++++ b/Grammar/Grammar
+@@ -35,9 +35,11 @@ simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
+ small_stmt: (expr_stmt | print_stmt  | del_stmt | pass_stmt | flow_stmt |
+              import_stmt | global_stmt | exec_stmt | assert_stmt)
+ expr_stmt: testlist (augassign (yield_expr|testlist) |
+-                     ('=' (yield_expr|testlist))*)
++                     ('=' (yield_expr|testlist))* | incr_stmt | decr_stmt)
+ augassign: ('+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' |
+             '<<=' | '>>=' | '**=' | '//=')
++incr_stmt: '++'
++decr_stmt: '--'
+ # For normal assignments, additional restrictions enforced by the interpreter
+ print_stmt: 'print' ( [ test (',' test)* [','] ] |
+                       '>>' test [ (',' test)+ [','] ] )
+diff --git a/Include/token.h b/Include/token.h
+index 72659ac..964531d 100644
+--- a/Include/token.h
++++ b/Include/token.h
+@@ -64,7 +64,8 @@ extern "C" {
+ #define OP		51
+ #define ERRORTOKEN	52
+ #define N_TOKENS	53
+-
++#define INCREMENT   54
++#define DECREMENT   55
+ /* Special definitions for cooperation with parser */
+ 
+ #define NT_OFFSET		256
+diff --git a/Parser/tokenizer.c b/Parser/tokenizer.c
+index 61bfb4e..2af0df1 100644
+--- a/Parser/tokenizer.c
++++ b/Parser/tokenizer.c
+@@ -89,7 +89,9 @@ char *_PyParser_TokenNames[] = {
+     /* This table must match the #defines in token.h! */
+     "OP",
+     "<ERRORTOKEN>",
+-    "<N_TOKENS>"
++    "<N_TOKENS>",
++    "INCREMENT",
++    "DECREMENT"
+ };
+ 
+ /* Create and initialize a new tok_state structure */
+@@ -1102,11 +1104,13 @@ PyToken_TwoChars(int c1, int c2)
+         break;
+     case '+':
+         switch (c2) {
++        case '+':               return INCREMENT;
+         case '=':               return PLUSEQUAL;
+         }
+         break;
+     case '-':
+         switch (c2) {
++        case '-':               return DECREMENT;
+         case '=':               return MINEQUAL;
+         }
+         break;
+diff --git a/Python/ast.c b/Python/ast.c
+index 318c0bb..4b1ada4 100644
+--- a/Python/ast.c
++++ b/Python/ast.c
+@@ -2227,6 +2227,46 @@ ast_for_expr_stmt(struct compiling *c, const node *n)
+ 
+         return AugAssign(expr1, newoperator, expr2, LINENO(n), n->n_col_offset,
+                          c->c_arena);
++    } else if ((TYPE(CHILD(n, 1)) == incr_stmt) || (TYPE(CHILD(n, 1)) == decr_stmt)) {
++        expr_ty expr1, expr2;
++        node *ch = CHILD(n, 0);
++        operator_ty operator_;
++
++        switch (TYPE(CHILD(n, 1))){
++            case incr_stmt:
++                operator_ = Add;
++                break;
++            case decr_stmt:
++                operator_ = Sub;
++                break;
++        }
++
++        expr1 = ast_for_testlist(c, ch);
++        if (!expr1) {
++            return NULL;
++        }
++        switch (expr1->kind) {
++            case Name_kind:
++//                if (forbidden_name(c, expr1->v.Name.id, n, 0)) {
++//                    return NULL;
++//                }
++                expr1->v.Name.ctx = Store;
++                break;
++            default:
++                ast_error(ch,
++                          "illegal target for increment/decrement");
++                return NULL;
++        }
++        // Create a PyObject for the number 1
++        PyObject *pynum = parsenumber(c, "1");
++
++        if (PyArena_AddPyObject(c->c_arena, pynum) < 0) {
++            Py_DECREF(pynum);
++            return NULL;
++        }
++        // Create that as an expression on the same line and offset as the ++/--
++        expr2 = Num(pynum, LINENO(n), n->n_col_offset, c->c_arena);
++        return AugAssign(expr1, operator_, expr2, LINENO(n), n->n_col_offset, c->c_arena);
+     }
+     else {
+         int i;
+-- 
+2.10.2
+
