@@ -42,8 +42,7 @@ NON_NULLABLE_FIELD_ERROR = 'Field "{}" couldn\'t be null'
 
 
 class ValidationError(Exception):
-    def __init__(self, msg):
-        super().__init__(msg)
+    pass
 
 
 class Field(ABC):
@@ -254,7 +253,7 @@ class Request(metaclass=RequestMeta):
             except ValidationError as ex:
                 errors.append(str(ex))
 
-        self.__errors = ';\n'.join(errors) if len(errors) > 0 else None
+        self.__errors = ';'.join(errors) if len(errors) > 0 else None
         return self.__errors is None
 
     def errors(self):
@@ -270,22 +269,8 @@ class ClientsInterestsRequest(Request):
     date = DateField(required=False, nullable=True)
 
     def validate(self):
-        return
-
-    @staticmethod
-    def handle(request, ctx, store):
-        method = ClientsInterestsRequest(request.arguments)
-
-        if not method.is_valid():
-            errors = method.errors()
-            logging.error('client_interests request is not valid')
-            return errors, INVALID_REQUEST
-
-        ctx['nclients'] = len(method.client_ids)
-        response = {}
-        for cid in method.client_ids:
-            response[cid] = scoring.get_interests(store, cid)
-        return response, OK
+        # always valid if all fields are valid
+        pass
 
 
 class OnlineScoreRequest(Request):
@@ -310,27 +295,6 @@ class OnlineScoreRequest(Request):
                               'first_name-last_name, '
                               'gender-birthday) in request')
 
-    @staticmethod
-    def handle(request, ctx, store):
-        method = OnlineScoreRequest(request.arguments)
-
-        if not method.is_valid():
-            errors = method.errors()
-            logging.error('Online score request is not valid')
-            return ';'.join(errors), INVALID_REQUEST
-
-        clean_data = method.clean_data()
-        ctx['has'] = []
-        for key, value in clean_data.items():
-            if value is not None:
-                ctx['has'].append(key)
-
-        if request.is_admin:
-            logging.info('Admin in online_score: returning 42')
-            return {'score': 42}, OK
-
-        return {'score': scoring.get_score(store, **clean_data)}, OK
-
 
 class MethodRequest(Request):
     account = CharField(required=False, nullable=True)
@@ -347,35 +311,6 @@ class MethodRequest(Request):
     def is_admin(self):
         return self.login == ADMIN_LOGIN
 
-    @staticmethod
-    def handle(request, ctx, store):
-        router = {
-            'online_score': OnlineScoreRequest,
-            'clients_interests': ClientsInterestsRequest
-        }
-
-        body = request['body']
-        method_request = MethodRequest(body)
-
-        if not method_request.is_valid():
-            logging.error('Method request is not valid')
-            return method_request.errors(), INVALID_REQUEST
-
-        if not check_auth(method_request):
-            logging.error('Auth failed')
-            return None, FORBIDDEN
-
-        try:
-            concrete_method_class = router[method_request.method]
-        except KeyError:
-            logging.error('Unknown method:'
-                          ' "{}"'.format(method_request.method))
-            return None, NOT_FOUND
-        logging.info('Method request: {}'.format(method_request.method))
-        response, code = concrete_method_class.handle(method_request,
-                                                      ctx, store)
-        return response, code
-
 
 def check_auth(request):
     if request.is_admin:
@@ -387,6 +322,69 @@ def check_auth(request):
     if digest == request.token:
         return True
     return False
+
+
+def online_score_handler(request, ctx, store):
+    method = OnlineScoreRequest(request.arguments)
+
+    if not method.is_valid():
+        logging.error('Online score request is not valid')
+        return method.errors(), INVALID_REQUEST
+
+    clean_data = method.clean_data()
+    ctx['has'] = []
+    for key, value in clean_data.items():
+        if value is not None:
+            ctx['has'].append(key)
+
+    if request.is_admin:
+        logging.info('Admin in online_score: returning 42')
+        return {'score': 42}, OK
+
+    return {'score': scoring.get_score(store, **clean_data)}, OK
+
+
+def client_interests_handler(request, ctx, store):
+    method = ClientsInterestsRequest(request.arguments)
+
+    if not method.is_valid():
+        logging.error('client_interests request is not valid')
+        return method.errors(), INVALID_REQUEST
+
+    ctx['nclients'] = len(method.client_ids)
+    response = {}
+    for cid in method.client_ids:
+        response[cid] = scoring.get_interests(store, cid)
+    return response, OK
+
+
+def method_handler(request, ctx, store):
+    router = {
+        'online_score': online_score_handler,
+        'clients_interests': client_interests_handler
+    }
+
+    body = request['body']
+    method_request = MethodRequest(body)
+
+    if not method_request.is_valid():
+        logging.error('Method request is not valid')
+        return method_request.errors(), INVALID_REQUEST
+
+    if not check_auth(method_request):
+        logging.error('Auth failed')
+        return None, FORBIDDEN
+
+    try:
+        concrete_method_handler = router[method_request.method]
+    except KeyError:
+        logging.error('Unknown method:'
+                      ' "{}"'.format(method_request.method))
+        return None, NOT_FOUND
+    logging.info('Method request: {}'.format(method_request.method))
+    response, code = concrete_method_handler(method_request,
+                                                  ctx, store)
+    return response, code
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
