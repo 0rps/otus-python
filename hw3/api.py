@@ -128,6 +128,13 @@ class EmailField(CharField):
 class PhoneField(Field):
 
     def validate_value(self, value):
+        if isinstance(value, str):
+            try:
+                int(value)
+            except ValueError:
+                raise ValidationError('Field "{}" has not number'
+                                      ' symbols'.format(self.field_name))
+
         if isinstance(value, int):
             value = str(value)
         if not isinstance(value, str) or len(value) != 11 or value[0] != '7':

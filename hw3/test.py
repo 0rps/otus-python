@@ -24,7 +24,7 @@ class TestSuite(unittest.TestCase):
         self.settings = {}
 
     def get_response(self, request):
-        return api.MethodRequest.handle({"body": request, "headers": self.headers}, self.context, self.settings)
+        return api.method_handler({"body": request, "headers": self.headers}, self.context, self.settings)
 
     def set_valid_auth(self, request):
         if request.get("login") == api.ADMIN_LOGIN:
@@ -182,13 +182,40 @@ class TestSuite(unittest.TestCase):
         field = api.ArgumentsField()
         field.field_name = 'field'
 
+        field.validate_value({'a': 1})
+
+        self.assertTrue(field.is_null_value(None))
+        self.assertTrue(field.is_null_value({}))
+        self.assertFalse(field.is_null_value({'a': 1}))
+
     def test_email_field(self):
         field = api.EmailField()
         field.field_name = 'field'
 
+        field.validate_value('test@test')
+
+        self.assertRaises(api.ValidationError, field.validate_value, '@test')
+        self.assertRaises(api.ValidationError, field.validate_value, 'test@')
+        self.assertRaises(api.ValidationError, field.validate_value, 'test')
+
+        self.assertTrue(field.is_null_value(''))
+        self.assertTrue(field.is_null_value(None))
+        self.assertFalse(field.is_null_value('test@test'))
+
     def test_phone_field(self):
         field = api.PhoneField()
         field.field_name = 'field'
+
+        field.validate_value('79998887766')
+        field.validate_value(79998887766)
+
+        self.assertRaises(api.ValidationError, field.validate_value, '799988877661')
+        self.assertRaises(api.ValidationError, field.validate_value, '7999888776')
+        self.assertRaises(api.ValidationError, field.validate_value, '89998887766')
+        self.assertRaises(api.ValidationError, field.validate_value, '7a998887766')
+
+        self.assertTrue(field.is_null_value(''))
+        self.assertTrue(field.is_null_value(None))
 
     def test_date_field(self):
         field = api.DateField()
