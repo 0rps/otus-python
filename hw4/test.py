@@ -1,6 +1,18 @@
 import unittest
-
+import datetime
+import functools
 import api
+
+
+def cases(cases):
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args):
+            for c in cases:
+                new_args = args + (c if isinstance(c, tuple) else (c,))
+                f(*new_args)
+        return wrapper
+    return decorator
 
 
 class TestSuite(unittest.TestCase):
@@ -42,127 +54,183 @@ class TestSuite(unittest.TestCase):
         inst = self.create_class_with_field(field, field_value=None, init_by_value=True)
         self.assertRaises(api.ValidationError, field.validate, inst)
 
-    def test_char_field_validate(self):
+    @cases(['19.12.2001', 'abc', '+777777', ''])
+    def test_char_field_validate_no_raise(self, args):
         field = api.CharField()
         field.field_name = 'field'
-        field.validate_value('19.12.2001')
+        field.validate_value(args)
 
-    def test_char_field_is_null(self):
+    @cases([1, ['1', '1'], {}])
+    def test_char_field_validate_raise(self, args):
         field = api.CharField()
         field.field_name = 'field'
-        self.assertTrue(field.is_null_value(''))
-        self.assertTrue(field.is_null_value(None))
-        self.assertFalse(field.is_null_value('19.12.2001'))
+        self.assertRaises(api.ValidationError, field.validate_value, args)
 
-    def test_args_field_validate(self):
+    @cases(['', None])
+    def test_char_field_is_null(self, args):
+        field = api.CharField()
+        field.field_name = 'field'
+        self.assertTrue(field.is_null_value(args))
+
+    @cases([{}, {'1': 1}, {'a': [1, 1, 1]}])
+    def test_args_field_validate_no_raise(self, args):
         field = api.ArgumentsField()
         field.field_name = 'field'
+        field.validate_value(args)
 
-    def test_args_field_is_null(self):
+    @cases(['', 1, [1, 2, 3]])
+    def test_args_field_validate_raise(self, args):
         field = api.ArgumentsField()
         field.field_name = 'field'
+        self.assertRaises(api.ValidationError, field.validate_value, args)
 
-    def test_email_field_validate(self):
+    @cases([None, {}])
+    def test_args_field_is_null_true(self, arg):
+        field = api.ArgumentsField()
+        field.field_name = 'field'
+        self.assertTrue(field.is_null_value(arg))
+
+    @cases([{1: 1}])
+    def test_args_field_is_null_false(self, args):
+        field = api.ArgumentsField()
+        field.field_name = 'field'
+        self.assertFalse(field.is_null_value(args))
+
+    @cases(['test@test', 'testttt@a'])
+    def test_email_field_validate_no_raise(self, arg):
         field = api.EmailField()
         field.field_name = 'field'
+        field.validate_value(arg)
 
-    def test_email_field_is_null(self):
+    @cases(['@test', 'test@', 'test'])
+    def test_email_field_validate_raise(self, arg):
         field = api.EmailField()
         field.field_name = 'field'
+        self.assertRaises(api.ValidationError, field.validate_value, arg)
 
-    def test_phone_field_validate(self):
+    @cases([None, ''])
+    def test_email_field_is_null_true(self, arg):
+        field = api.EmailField()
+        self.assertTrue(field.is_null_value(arg))
+
+    def test_email_field_is_null_false(self):
+        field = api.EmailField()
+        self.assertFalse(field.is_null_value('test@test'))
+
+    @cases(['79998887766', 79998887766])
+    def test_phone_field_validate_no_raise(self, arg):
         field = api.PhoneField()
         field.field_name = 'field'
+        field.validate_value(arg)
 
-    def test_phone_field_is_null(self):
+    @cases(['799988877661', '7999888776', '89998887766', '7a998887766'])
+    def test_phone_field_validate_raise(self, arg):
         field = api.PhoneField()
         field.field_name = 'field'
+        self.assertRaises(api.ValidationError, field.validate_value, arg)
 
-    def test_date_field_validate(self):
+    @cases(['', None])
+    def test_phone_field_is_null_true(self, arg):
+        field = api.PhoneField()
+        field.field_name = 'field'
+        self.assertTrue(field.is_null_value(arg))
+
+    def test_phone_field_is_null_false(self):
+        field = api.PhoneField()
+        field.field_name = 'field'
+        self.assertFalse(field.is_null_value('89998887766'))
+
+    @cases(['19.12.2001', '01.01.1901'])
+    def test_date_field_validate_no_raise(self, arg):
         field = api.DateField()
         field.field_name = 'field'
+        field.validate_value(arg)
 
-        field.validate_value('19.12.2001')
-
-        self.assertRaises(api.ValidationError, field.validate_value, '45.12.2001')
-        self.assertRaises(api.ValidationError, field.validate_value, 'asdf.12.2001')
-
-    def test_date_field_is_null(self):
+    @cases(['45.12.2001', 'asdf.12.2001'])
+    def test_date_field_validate_raise(self, arg):
         field = api.DateField()
         field.field_name = 'field'
+        self.assertRaises(api.ValidationError, field.validate_value, arg)
 
-        self.assertTrue(field.is_null_value(''))
-        self.assertTrue(field.is_null_value(None))
+    @cases(['', None])
+    def test_date_field_is_null_true(self, arg):
+        field = api.DateField()
+        field.field_name = 'field'
+        self.assertTrue(field.is_null_value(arg))
+
+    def test_date_field_is_null_false(self):
+        field = api.DateField()
+        field.field_name = 'field'
         self.assertFalse(field.is_null_value('19.12.2001'))
 
-    def test_birthday_field_validate(self):
+    #mock datetime now
+    @cases(['19.12.2001'])
+    def test_birthday_field_validate_no_raise(self, arg):
         field = api.BirthDayField()
         field.field_name = 'field'
+        field.validate_value(arg)
 
-        field.validate_value('19.12.2001')
-        self.assertRaises(api.ValidationError, field.validate_value, '19.12.1901')
-        self.assertRaises(api.ValidationError, field.validate_value, '45.12.2001')
-        self.assertRaises(api.ValidationError, field.validate_value, 'asdf.12.2001')
-
-        self.assertTrue(field.is_null_value(''))
-        self.assertTrue(field.is_null_value(None))
-        self.assertFalse(field.is_null_value('19.12.2001'))
-
-    def test_birthday_field_is_null(self):
+    @cases(['19.12.1901', '45.12.2001', 'asdf.12.2001'])
+    def test_birthday_field_validate_raise(self, arg):
         field = api.BirthDayField()
         field.field_name = 'field'
+        self.assertRaises(api.ValidationError, field.validate_value, arg)
 
-        field.validate_value('19.12.2001')
-        self.assertRaises(api.ValidationError, field.validate_value, '19.12.1901')
-        self.assertRaises(api.ValidationError, field.validate_value, '45.12.2001')
-        self.assertRaises(api.ValidationError, field.validate_value, 'asdf.12.2001')
-
-        self.assertTrue(field.is_null_value(''))
+    @cases(['', None])
+    def test_birthday_field_is_null_true(self, arg):
+        field = api.BirthDayField()
+        field.field_name = 'field'
+        self.assertTrue(field.is_null_value(arg))
         self.assertTrue(field.is_null_value(None))
+
+    def test_birthday_field_is_null_false(self):
+        field = api.BirthDayField()
+        field.field_name = 'field'
         self.assertFalse(field.is_null_value('19.12.2001'))
 
-    def test_gender_field_validate(self):
+    @cases([0, 1, 2])
+    def test_gender_field_validate_no_raise(self, arg):
         field = api.GenderField()
         field.field_name = 'field'
+        field.validate_value(arg)
 
-        field.validate_value(0)
-        field.validate_value(1)
-        field.validate_value(2)
-
-        self.assertRaises(api.ValidationError, field.validate_value, '12')
-        self.assertRaises(api.ValidationError, field.validate_value, 3)
-
-        self.assertTrue(field.is_null_value(None))
-
-    def test_gender_field_is_null(self):
+    @cases([-1, 3, '2'])
+    def test_gender_field_validate_raise(self, arg):
         field = api.GenderField()
         field.field_name = 'field'
+        self.assertRaises(api.ValidationError, field.validate_value, arg)
 
-        field.validate_value(0)
-        field.validate_value(1)
-        field.validate_value(2)
-
-        self.assertRaises(api.ValidationError, field.validate_value, '12')
-        self.assertRaises(api.ValidationError, field.validate_value, 3)
-
+    def test_gender_field_is_null_true(self):
+        field = api.GenderField()
+        field.field_name = 'field'
         self.assertTrue(field.is_null_value(None))
 
-    def test_client_ids_field_validate(self):
+    def test_gender_field_is_null_false(self):
+        field = api.GenderField()
+        field.field_name = 'field'
+        self.assertFalse(field.is_null_value(1))
+
+    @cases([[1, 2], []])
+    def test_client_ids_field_validate_no_raise(self, arg):
         field = api.ClientIDsField()
         field.field_name = 'field'
+        field.validate_value(arg)
 
-        field.validate_value([1,2])
-        field.validate_value([])
-
-        self.assertRaises(api.ValidationError, field.validate_value, '123')
-        self.assertRaises(api.ValidationError, field.validate_value, [1, '2'])
-
-    def test_client_ids_field_is_null(self):
+    @cases(['123', [1, '2']])
+    def test_client_ids_field_validate_raise(self, arg):
         field = api.ClientIDsField()
         field.field_name = 'field'
+        self.assertRaises(api.ValidationError, field.validate_value, arg)
 
-        self.assertTrue(field.is_null_value(None))
-        self.assertTrue(field.is_null_value([]))
+    @cases([None, []])
+    def test_client_ids_field_is_null_true(self, arg):
+        field = api.ClientIDsField()
+        field.field_name = 'field'
+        self.assertTrue(field.is_null_value(arg))
+
+    def test_client_ids_field_is_null_false(self):
+        field = api.ClientIDsField()
+        field.field_name = 'field'
         self.assertFalse(field.is_null_value([1, 2]))
 
     def test_request_field_validation(self):
