@@ -162,28 +162,17 @@ class DateField(Field):
         return value is None or value == ''
 
 
-class BirthDayField(Field):
+class BirthDayField(DateField):
 
     def validate_value(self, value):
-        if not isinstance(value, str):
-            raise ValidationError('Field "{}" is not in string'
-                                  ' format'.format(self.field_name))
+        super().validate_value(value)
 
-        try:
-            date_value = datetime.datetime.strptime(value, '%d.%m.%Y')
-            date_value = date_value.date()
-        except ValueError:
-            raise ValidationError('Field "{}" doesn\'t have format'
-                                  ' DD.MM.YYYY'.format(self.field_name))
-
-        date_delta = datetime.datetime.now().date() - date_value
-        if date_delta.days / 365 > 70:
+        date_value = datetime.datetime.strptime(value, '%d.%m.%Y').date()
+        delta_days = (datetime.datetime.now().date() - date_value).days
+        if delta_days / 365 > 70:
             raise ValidationError('Value of field "{}"'
                                   ' older than 70'
                                   ' years'.format(self.field_name))
-
-    def is_null_value(self, value):
-        return value is None or value == ''
 
 
 class GenderField(Field):
