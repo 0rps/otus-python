@@ -1,6 +1,8 @@
 import unittest
-import datetime
 import functools
+from datetime import datetime
+from datetime import timedelta
+
 import api
 
 
@@ -163,30 +165,21 @@ class TestSuite(unittest.TestCase):
         field.field_name = 'field'
         self.assertFalse(field.is_null_value('19.12.2001'))
 
-    #mock datetime now
-    @cases(['19.12.2001'])
-    def test_birthday_field_validate_no_raise(self, arg):
-        field = api.BirthDayField()
-        field.field_name = 'field'
-        field.validate_value(arg)
+    def test_birthday_field_validate_no_raise(self):
+        old_time = datetime.now() - timedelta(days=365*70-1)
+        old_time = old_time.strftime("%d.%m.%Y")
 
-    @cases(['19.12.1901', '45.12.2001', 'asdf.12.2001'])
-    def test_birthday_field_validate_raise(self, arg):
         field = api.BirthDayField()
         field.field_name = 'field'
-        self.assertRaises(api.ValidationError, field.validate_value, arg)
+        field.validate_value(old_time)
 
-    @cases(['', None])
-    def test_birthday_field_is_null_true(self, arg):
-        field = api.BirthDayField()
-        field.field_name = 'field'
-        self.assertTrue(field.is_null_value(arg))
-        self.assertTrue(field.is_null_value(None))
+    def test_birthday_field_validate_raise(self):
+        old_time = datetime.now() - timedelta(days=365*70+1)
+        old_time = old_time.strftime("%d.%m.%Y")
 
-    def test_birthday_field_is_null_false(self):
         field = api.BirthDayField()
         field.field_name = 'field'
-        self.assertFalse(field.is_null_value('19.12.2001'))
+        self.assertRaises(api.ValidationError, field.validate_value, old_time)
 
     @cases([0, 1, 2])
     def test_gender_field_validate_no_raise(self, arg):
