@@ -255,18 +255,13 @@ class Request(metaclass=RequestMeta):
     def errors(self):
         return self.__errors
 
-    @abstractclassmethod
     def validate(self):
-        return NotImplemented
+        pass
 
 
 class ClientsInterestsRequest(Request):
     client_ids = ClientIDsField(required=True)
     date = DateField(required=False, nullable=True)
-
-    def validate(self):
-        # always valid if all fields are valid
-        pass
 
 
 class OnlineScoreRequest(Request):
@@ -298,10 +293,6 @@ class MethodRequest(Request):
     token = CharField(required=True, nullable=True)
     arguments = ArgumentsField(required=True, nullable=True)
     method = CharField(required=True, nullable=False)
-
-    def validate(self):
-        # always valid if all fields are valid
-        pass
 
     @property
     def is_admin(self):
