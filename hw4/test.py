@@ -1,5 +1,6 @@
 import unittest
 import functools
+from unittest import mock
 from datetime import datetime
 from datetime import timedelta
 
@@ -226,31 +227,155 @@ class TestSuite(unittest.TestCase):
         field.field_name = 'field'
         self.assertFalse(field.is_null_value([1, 2]))
 
-    def test_request_field_validation(self):
+    @cases([{'client_ids': [1, 2]}, {'client_ids': [1, 2], 'date': '01.01.1990'}])
+    def test_request_field_validation_valid(self, args):
+        request = api.ClientsInterestsRequest(args)
+        self.assertTrue(request.is_valid())
+
+    @cases([{}, {'client_ids': []}, {'client_ids': [1], 'date': '55.01.2018'}])
+    def test_request_field_validation_not_valid(self, args):
+        request = api.ClientsInterestsRequest(args)
+        self.assertFalse(request.is_valid())
+
+    def test_request_field_validation_return_invalid(self):
+        class Request:
+            def __init__(self, args): self.arguments = args
+
+        request = Request({})
+        response, code = api.client_interests_handler(request, None, None)
+        self.assertEqual(code, api.INVALID_REQUEST)
+
+    @cases([[{'client_ids': [1]}, 1], [{'client_ids': [1, 2, 3]}, 3]])
+    def test_client_interests_handler_ctx(self, args):
+        class A:
+            pass
+
+        with mock.patch('scoring.get_interests') as gi:
+            gi.return_value = []
+            ctx = {}
+            request = A()
+            request.arguments = args[0]
+
+            api.client_interests_handler(request, ctx, None)
+            self.assertEqual(ctx['nclients'], args[1])
+
+    @cases([{'phone': '78889998877', 'email': 'tt@tt'}, {'first_name': '11', 'last_name': '22'}, {'gender': 1, 'birthday': '01.01.2000'}])
+    def test_online_score_validation_valid(self, args):
+        request = api.OnlineScoreRequest(args)
+        self.assertTrue(request.is_valid())
+
+    @cases([{'first_name': '11', 'birthday': '01.01.2000'}, {'gender': '1', 'last_name': '22'}])
+    def test_online_score_validation_not_valid(self, args):
+        request = api.OnlineScoreRequest(args)
+        self.assertFalse(request.is_valid())
+
+    def test_online_score_handler_ctx(self):
+        class Request:
+            def __init__(self, args):
+                self.arguments = args
+                self.is_admin = None
+
+        args = {'phone': '78889990099', 'email': 'tt@tt', 'gender': None, 'first_name': ''}
+        res = ['phone', 'email']
+
+        with mock.patch('scoring.get_score') as gs:
+            gs.return_value = None
+
+            ctx = {}
+            request = Request(args)
+
+            api.online_score_handler(request, ctx, None)
+            self.assertListEqual(sorted(res), sorted(ctx['has']))
+
+    def test_online_score_handler_admin(self):
+        class Request:
+            def __init__(self, args):
+                self.arguments = args
+                self.is_admin = True
+
+        args = {'phone': '78889990099', 'email': 'tt@tt', 'gender': None, 'first_name': ''}
+
+        with mock.patch('scoring.get_score') as gs:
+            gs.return_value = None
+
+            request = Request(args)
+
+            handler_res, _ = api.online_score_handler(request, {}, None)
+            self.assertEqual(handler_res['score'], 42)
+
+    def test_auth_valid(self):
         pass
 
-    def test_client_interests_ctx(self):
+    def test_auth_not_valid(self):
         pass
 
-    def test_client_interests(self):
+    def test_auth_admin_valid(self):
         pass
 
-    def test_online_score_validation(self):
-        pass
-
-    def test_online_score_ctx(self):
-        pass
-
-    def test_online_score_admin(self):
+    def test_auth_admin_not_valid(self):
         pass
 
     def test_online_score(self):
         pass
 
-    def test_method_auth(self):
+    def test_method_fail_auth(self):
         pass
 
-    def test_method_routing(self):
+    def test_method_fail_method(self):
+        pass
+
+    def test_method_return_stub(self):
+        pass
+
+    def test_get_score(self):
+        pass
+
+    def test_get_interests(self):
+        pass
+
+
+class StoreTestSuite(unittest.TestCase):
+
+    def test_set_get(self):
+        pass
+
+    def test_set_get_with_reconnect(self):
+        pass
+
+    def test_set_get_unavailable_store(self):
+        pass
+
+    def test_cache(self):
+        pass
+
+    def test_cache_expiration(self):
+        pass
+
+    def test_cache_unavailable_store(self):
+        pass
+
+    def test_get_store(self):
+        pass
+
+    def test_get_interests(self):
+        pass
+
+
+class MethodTestSuiteWithStore(unittest.TestCase):
+
+    def test_online_score(self):
+        pass
+
+    def test_online_score_invalid_request(self):
+        pass
+
+    def test_online_score_store_unavailable(self):
+        pass
+
+    def test_client_interests(self):
+        pass
+
+    def test_client_interests_store_unavaliable(self):
         pass
 
 
