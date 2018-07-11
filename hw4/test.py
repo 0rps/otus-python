@@ -1,10 +1,13 @@
 import unittest
 import functools
+import hashlib
+import json
 from unittest import mock
 from datetime import datetime
 from datetime import timedelta
 
 import api
+import scoring
 
 
 def cases(cases):
@@ -41,6 +44,15 @@ class TestSuite(unittest.TestCase):
             return RequestTestClass({'field': field_value})
 
         return RequestTestClass({})
+
+    def set_valid_auth(self, request):
+        if request.get("login") == api.ADMIN_LOGIN:
+            msg = (datetime.now().strftime("%Y%m%d%H") + api.ADMIN_SALT).encode('utf-8')
+            request["token"] = hashlib.sha512(msg).hexdigest()
+        else:
+            msg = request.get("account", "") + request.get("login", "") + api.SALT
+            msg = msg.encode('utf-8')
+            request["token"] = hashlib.sha512(msg).hexdigest()
 
     def test_required_nullable_field(self):
         field = api.CharField(required=True, nullable=True)
@@ -245,7 +257,9 @@ class TestSuite(unittest.TestCase):
         response, code = api.client_interests_handler(request, None, None)
         self.assertEqual(code, api.INVALID_REQUEST)
 
-    @cases([[{'client_ids': [1]}, 1], [{'client_ids': [1, 2, 3]}, 3]])
+    @cases([
+        [{'client_ids': [1]}, 1],
+        [{'client_ids': [1, 2, 3]}, 3]])
     def test_client_interests_handler_ctx(self, args):
         class A:
             pass
@@ -259,12 +273,17 @@ class TestSuite(unittest.TestCase):
             api.client_interests_handler(request, ctx, None)
             self.assertEqual(ctx['nclients'], args[1])
 
-    @cases([{'phone': '78889998877', 'email': 'tt@tt'}, {'first_name': '11', 'last_name': '22'}, {'gender': 1, 'birthday': '01.01.2000'}])
+    @cases([
+        {'phone': '78889998877', 'email': 'tt@tt'},
+        {'first_name': '11', 'last_name': '22'},
+        {'gender': 1, 'birthday': '01.01.2000'}])
     def test_online_score_validation_valid(self, args):
         request = api.OnlineScoreRequest(args)
         self.assertTrue(request.is_valid())
 
-    @cases([{'first_name': '11', 'birthday': '01.01.2000'}, {'gender': '1', 'last_name': '22'}])
+    @cases([
+        {'first_name': '11', 'birthday': '01.01.2000'},
+        {'gender': '1', 'last_name': '22'}])
     def test_online_score_validation_not_valid(self, args):
         request = api.OnlineScoreRequest(args)
         self.assertFalse(request.is_valid())
@@ -303,35 +322,119 @@ class TestSuite(unittest.TestCase):
             handler_res, _ = api.online_score_handler(request, {}, None)
             self.assertEqual(handler_res['score'], 42)
 
-    def test_auth_valid(self):
-        pass
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "", "arguments": {}},
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "sdd", "arguments": {}}
+    ])
+    def test_auth_not_valid(self, request):
+        self.assertFalse(api.check_auth(request))
 
-    def test_auth_not_valid(self):
-        pass
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "", "arguments": {}},
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "sdd", "arguments": {}}
+    ])
+    def test_auth_valid(self, request):
+        self.set_valid_auth(request)
+        self.assertTrue(api.check_auth(request))
 
-    def test_auth_admin_valid(self):
-        pass
+    @cases([
+        {"account": "horns&hoofs", "login": "admin", "method": "online_score", "token": "", "arguments": {}},
+    ])
+    def test_auth_admin_not_valid(self, request):
+        _, code = self.get_response(request)
+        self.assertFalse(api.check_auth(request))
 
-    def test_auth_admin_not_valid(self):
-        pass
+    @cases([
+        {"account": "horns&hoofs", "login": "admin", "method": "online_score", "token": "", "arguments": {}},
+    ])
+    def test_auth_admin_valid(self, request):
+        self.set_valid_auth(request)
+        self.assertTrue(api.check_auth(request))
 
-    def test_online_score(self):
-        pass
+    @cases([
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "", "arguments": {}},
+        {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "sdd", "arguments": {}},
+        {"account": "horns&hoofs", "login": "admin", "method": "online_score", "token": "", "arguments": {}},
+    ])
+    def test_method_fail_auth(self, request):
+        _, code = self.get_response(request)
+        self.assertEqual(api.FORBIDDEN, code)
 
-    def test_method_fail_auth(self):
-        pass
+    @cases([
+        {"account": "horns&hoofs", "login": "admin", "method": "online_scre", "token": "", "arguments": {}},
+    ])
+    def test_method_fail_method(self, request):
+        _, code = self.get_response(request)
+        self.assertEqual(api.NOT_FOUND, code)
 
-    def test_method_fail_method(self):
-        pass
+    @cases([
+        [['phone', 'email', 'birthday', 'gender', 'first_name'], 4.5],
+        [['phone', 'email', 'gender', 'first_name', 'last_name'], 3.5]
+    ])
+    def test_get_score(self, args, result):
+        class Store:
+            def cache_get(self, *_): pass
 
-    def test_method_return_stub(self):
-        pass
+            def cache_set(self, *_): pass
 
-    def test_get_score(self):
-        pass
+        args = {key: True for key in args}
+        self.assertAlmostEqual(scoring.get_score(Store(), **args), result)
 
     def test_get_interests(self):
-        pass
+        class Store:
+            def __init__(self, d): self.d = d
+
+            def get(self, *_): return self.d
+
+        d = json.dumps({'1': ['a', 'b', 'c']})
+        res = json.dumps(scoring.get_interests(Store(d), 1))
+        self.assertEqual(res, d)
+
+    @cases([
+        {"phone": "79175002040", "email": "tt@tt"},
+        {"phone": 79175002040, "email": "tt@tt"},
+        {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"},
+        {"gender": 0, "birthday": "01.01.2000"},
+        {"gender": 2, "birthday": "01.01.2000"},
+        {"first_name": "a", "last_name": "b"},
+        {"phone": "79995008811", "email": "ttt@tt", "gender": 1, "birthday": "01.01.2000",
+         "first_name": "a", "last_name": "b"},
+    ])
+    def test_method_online_score(self, arguments):
+        class Store:
+            def cache_get(self, *_): pass
+
+            def cache_set(self, *_): pass
+
+        self.store = Store()
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        self.set_valid_auth(request)
+
+    def test_ok_score_admin_request(self):
+        arguments = {"phone": "79995008811", "email": "tt@tt"}
+        request = {"account": "horns&hoofs", "login": "admin", "method": "online_score", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code)
+        score = response.get("score")
+        self.assertEqual(score, 42)
+
+    @cases([
+        {"client_ids": [1, 2, 3], "date": datetime.today().strftime("%d.%m.%Y")},
+        {"client_ids": [1, 2], "date": "19.07.2017"},
+        {"client_ids": [0]},
+    ])
+    def test_method_client_interests(self, arguments):
+        class Store:
+            def __init__(self, d): self.d = d
+
+            def get(self, *_): return self.d
+
+        self.store = Store(json.dumps({}))
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code, arguments)
 
 
 class StoreTestSuite(unittest.TestCase):
