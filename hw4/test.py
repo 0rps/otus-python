@@ -21,11 +21,29 @@ def cases(cases):
     return decorator
 
 
-class TestSuite(unittest.TestCase):
+class StubStore:
+
+    def __init__(self, optional_get_result=None):
+        self.result = optional_get_result
+
+    def get(self, _):
+        return self.result
+
+    def set(self, _, __):
+        pass
+
+    def cache_get(self, _):
+        pass
+
+    def cache_set(self, _, __, ___):
+        pass
+
+
+class RequestTestSuite(unittest.TestCase):
     def setUp(self):
         self.context = {}
         self.headers = {}
-        self.store = None
+        self.store = StubStore()
 
     def get_response(self, request):
         return api.method_handler({"body": request, "headers": self.headers}, self.context, self.store)
@@ -326,29 +344,32 @@ class TestSuite(unittest.TestCase):
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "", "arguments": {}},
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "sdd", "arguments": {}}
     ])
-    def test_auth_not_valid(self, request):
+    def test_auth_not_valid(self, args):
+        request = api.MethodRequest(args)
         self.assertFalse(api.check_auth(request))
 
     @cases([
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "", "arguments": {}},
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "sdd", "arguments": {}}
     ])
-    def test_auth_valid(self, request):
-        self.set_valid_auth(request)
+    def test_auth_valid(self, args):
+        self.set_valid_auth(args)
+        request = api.MethodRequest(args)
         self.assertTrue(api.check_auth(request))
 
     @cases([
         {"account": "horns&hoofs", "login": "admin", "method": "online_score", "token": "", "arguments": {}},
     ])
-    def test_auth_admin_not_valid(self, request):
-        _, code = self.get_response(request)
+    def test_auth_admin_not_valid(self, args):
+        request = api.MethodRequest(args)
         self.assertFalse(api.check_auth(request))
 
     @cases([
         {"account": "horns&hoofs", "login": "admin", "method": "online_score", "token": "", "arguments": {}},
     ])
-    def test_auth_admin_valid(self, request):
-        self.set_valid_auth(request)
+    def test_auth_admin_valid(self, args):
+        self.set_valid_auth(args)
+        request = api.MethodRequest(args)
         self.assertTrue(api.check_auth(request))
 
     @cases([
@@ -364,30 +385,21 @@ class TestSuite(unittest.TestCase):
         {"account": "horns&hoofs", "login": "admin", "method": "online_scre", "token": "", "arguments": {}},
     ])
     def test_method_fail_method(self, request):
+        self.set_valid_auth(request)
         _, code = self.get_response(request)
         self.assertEqual(api.NOT_FOUND, code)
 
     @cases([
-        [['phone', 'email', 'birthday', 'gender', 'first_name'], 4.5],
-        [['phone', 'email', 'gender', 'first_name', 'last_name'], 3.5]
+        (['phone', 'email', 'gender', 'first_name'], 3),
+        (['phone', 'email', 'gender', 'first_name', 'last_name'], 3.5)
     ])
     def test_get_score(self, args, result):
-        class Store:
-            def cache_get(self, *_): pass
-
-            def cache_set(self, *_): pass
-
-        args = {key: True for key in args}
-        self.assertAlmostEqual(scoring.get_score(Store(), **args), result)
+        args = {key: '1' for key in args}
+        self.assertAlmostEqual(scoring.get_score(self.store, **args), result)
 
     def test_get_interests(self):
-        class Store:
-            def __init__(self, d): self.d = d
-
-            def get(self, *_): return self.d
-
-        d = json.dumps({'1': ['a', 'b', 'c']})
-        res = json.dumps(scoring.get_interests(Store(d), 1))
+        d = json.dumps([])
+        res = json.dumps(scoring.get_interests(self.store, 1))
         self.assertEqual(res, d)
 
     @cases([
@@ -401,14 +413,10 @@ class TestSuite(unittest.TestCase):
          "first_name": "a", "last_name": "b"},
     ])
     def test_method_online_score(self, arguments):
-        class Store:
-            def cache_get(self, *_): pass
-
-            def cache_set(self, *_): pass
-
-        self.store = Store()
         request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
         self.set_valid_auth(request)
+        _, code = self.get_response(request)
+        self.assertEqual(code, api.OK)
 
     def test_ok_score_admin_request(self):
         arguments = {"phone": "79995008811", "email": "tt@tt"}
@@ -425,16 +433,10 @@ class TestSuite(unittest.TestCase):
         {"client_ids": [0]},
     ])
     def test_method_client_interests(self, arguments):
-        class Store:
-            def __init__(self, d): self.d = d
-
-            def get(self, *_): return self.d
-
-        self.store = Store(json.dumps({}))
         request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
         self.set_valid_auth(request)
         response, code = self.get_response(request)
-        self.assertEqual(api.OK, code, arguments)
+        self.assertEqual(api.OK, code)
 
 
 class StoreTestSuite(unittest.TestCase):

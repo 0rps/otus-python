@@ -68,7 +68,8 @@ class Field(ABC):
         if self.is_set(instance):
             value = self._data.get(instance)
             if value is not None:
-                self.validate_value(value)
+                value = self.validate_value(value)
+                self._data[instance] = value
             elif not self._nullable:
                 msg = NON_NULLABLE_FIELD_ERROR.format(self.field_name)
                 raise ValidationError(msg)
@@ -91,6 +92,7 @@ class CharField(Field):
         if not isinstance(value, str):
             raise ValidationError('Field "{}"'
                                   ' is not string'.format(self.field_name))
+        return value
 
     def is_null_value(self, value):
         return value is None or value == ''
@@ -102,6 +104,7 @@ class ArgumentsField(Field):
         if not isinstance(value, dict):
             raise ValidationError('Field "{}" is not'
                                   ' dict'.format(self.field_name))
+        return value
 
     def is_null_value(self, value):
         return value is None or (isinstance(value, dict) and len(value) == 0)
@@ -120,6 +123,8 @@ class EmailField(CharField):
             raise ValidationError('Field "{}" must be email '
                                   'string with one '
                                   '"@" '.format(self.field_name))
+
+        return value
 
     def is_null_value(self, value):
         return value is None or value == ''
@@ -141,6 +146,7 @@ class PhoneField(Field):
             raise ValidationError('Field "{}" must '
                                   'be number/string with 11 symbols '
                                   'starting with 7'.format(self.field_name))
+        return value
 
     def is_null_value(self, value):
         return value is None or value == ''
@@ -153,10 +159,12 @@ class DateField(Field):
             raise ValidationError('Field "{}" is not string')
 
         try:
-            datetime.datetime.strptime(value, '%d.%m.%Y')
+            value = datetime.datetime.strptime(value, '%d.%m.%Y')
         except ValueError:
             raise ValidationError('Field "{}" doesn\'t have '
                                   'format DD.MM.YYYY'.format(self.field_name))
+
+        return value
 
     def is_null_value(self, value):
         return value is None or value == ''
@@ -165,7 +173,7 @@ class DateField(Field):
 class BirthDayField(DateField):
 
     def validate_value(self, value):
-        super().validate_value(value)
+        real_value = super().validate_value(value)
 
         date_value = datetime.datetime.strptime(value, '%d.%m.%Y').date()
         delta_days = (datetime.datetime.now().date() - date_value).days
@@ -174,6 +182,8 @@ class BirthDayField(DateField):
                                   ' older than 70'
                                   ' years'.format(self.field_name))
 
+        return real_value
+
 
 class GenderField(Field):
 
@@ -181,6 +191,7 @@ class GenderField(Field):
         if not isinstance(value, int) or value not in (0, 1, 2):
             raise ValidationError('Field "{}" is not int'
                                   ' in range(1,2,3)'.format(self.field_name))
+        return value
 
     def is_null_value(self, value):
         return value is None
@@ -197,6 +208,7 @@ class ClientIDsField(Field):
             if not isinstance(item, int):
                 raise ValidationError('Field "{}" has no'
                                       ' int values'.format(self.field_name))
+        return value
 
     def is_null_value(self, value):
         return value is None or (isinstance(value, list) and len(value) == 0)
