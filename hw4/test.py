@@ -2,6 +2,7 @@ import unittest
 import functools
 import hashlib
 import json
+from store import Store
 from unittest import mock
 from datetime import datetime
 from datetime import timedelta
@@ -441,8 +442,35 @@ class RequestTestSuite(unittest.TestCase):
 
 class StoreTestSuite(unittest.TestCase):
 
-    def test_set_get(self):
+    def setUp(self):
+        self.store = Store()
+
+    @cases([
+        ('key_1', '1'),
+        ('key_2', 2),
+        ('key_3', [1, 2, 3, 4, '5'])
+    ])
+    def test_set_get(self, key, value):
+        self.store.set(key, 0)
+        self.store.set(key, value)
+        self.store.set(key + '1', 0)
+
+        if isinstance(value, list):
+            self.assertListEqual(value, self.store.get(key))
+        else:
+            self.assertEqual(value, self.store.get(key))
+
+    def test_cache(self):
         pass
+        # self.store.cache_set('key_1', 1, -1)
+        # self.store.cache_set('key_2', 2, 30)
+        # self.store.cache_set('key_3', 3, 30)
+        #
+        # self.assertEqual(self.store.cache_get('key_1'), None)
+        # self.assertEqual(self.store.cache_get('key_2'), 2)
+        # self.assertEqual(self.store.cache_get('key_3'), 3)
+        #
+        # self.assertEqual(self.store.get('key_4'), None)
 
     def test_set_get_with_reconnect(self):
         pass
@@ -450,8 +478,6 @@ class StoreTestSuite(unittest.TestCase):
     def test_set_get_unavailable_store(self):
         pass
 
-    def test_cache(self):
-        pass
 
     def test_cache_expiration(self):
         pass
