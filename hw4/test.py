@@ -446,6 +446,8 @@ class StoreTestSuite(unittest.TestCase):
 
     def setUp(self):
         self.store = store.Store()
+
+    def tearDown(self):
         self.store.flush()
 
     @cases([
@@ -559,6 +561,8 @@ class MethodTestSuiteWithStore(unittest.TestCase):
         self.headers = {}
 
         self.store = store.Store()
+
+    def tearDown(self):
         self.store.flush()
 
     @cases([

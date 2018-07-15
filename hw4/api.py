@@ -389,7 +389,7 @@ def method_handler(request, ctx, store):
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
     router = {
-        "method": MethodRequest
+        "method": method_handler
     }
     store = store.Store()
 
@@ -403,9 +403,11 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
         try:
             data_string = self.rfile.read(int(self.headers['Content-Length']))
             request = json.loads(data_string.decode('utf-8'))
-        except Exception as e:
+        except Exception:
             logging.error('Couldn\'t parse request json')
-            code = BAD_REQUEST
+        else:
+            if not request:
+                logging.error('Request data is empty')
 
         if request:
             path = self.path.strip("/")
@@ -413,7 +415,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
                                         context["request_id"]))
             if path in self.router:
                 try:
-                    response, code = self.router[path].handle(
+                    response, code = self.router[path](
                         {"body": request, "headers": self.headers},
                         context, self.store)
                 except Exception as e:
@@ -421,6 +423,8 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
                     code = INTERNAL_ERROR
             else:
                 code = NOT_FOUND
+        else:
+            code = BAD_REQUEST
 
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
@@ -438,13 +442,20 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     op = OptionParser()
+
     op.add_option("-p", "--port", action="store", type=int, default=8080)
+    op.add_option("-s", "--store", action="store",)
     op.add_option("-l", "--log", action="store", default=None)
     (opts, args) = op.parse_args()
     logging.basicConfig(filename=opts.log, level=logging.INFO,
                         format='[%(asctime)s] %(levelname).1s %(message)s',
                         datefmt='%Y.%m.%d %H:%M:%S')
+
+    store_addr, store_port = opts.store.split(':')
+    MainHTTPHandler.store = store.Store(store_addr, store_port)
+
     server = HTTPServer(("localhost", opts.port), MainHTTPHandler)
+
     logging.info("Starting server at %s" % opts.port)
     try:
         server.serve_forever()
