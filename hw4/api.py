@@ -10,6 +10,7 @@ from weakref import WeakKeyDictionary
 from optparse import OptionParser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
+import store
 import scoring
 
 SALT = "Otus"
@@ -390,7 +391,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
     router = {
         "method": MethodRequest
     }
-    store = None
+    store = store.Store()
 
     def get_request_id(self, headers):
         return headers.get('HTTP_X_REQUEST_ID', uuid.uuid4().hex)

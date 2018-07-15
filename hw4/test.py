@@ -41,6 +41,16 @@ class StubStore:
         pass
 
 
+def set_valid_auth(request):
+    if request.get("login") == api.ADMIN_LOGIN:
+        msg = (datetime.now().strftime("%Y%m%d%H") + api.ADMIN_SALT).encode('utf-8')
+        request["token"] = hashlib.sha512(msg).hexdigest()
+    else:
+        msg = request.get("account", "") + request.get("login", "") + api.SALT
+        msg = msg.encode('utf-8')
+        request["token"] = hashlib.sha512(msg).hexdigest()
+
+
 class RequestTestSuite(unittest.TestCase):
     def setUp(self):
         self.context = {}
@@ -64,15 +74,6 @@ class RequestTestSuite(unittest.TestCase):
             return RequestTestClass({'field': field_value})
 
         return RequestTestClass({})
-
-    def set_valid_auth(self, request):
-        if request.get("login") == api.ADMIN_LOGIN:
-            msg = (datetime.now().strftime("%Y%m%d%H") + api.ADMIN_SALT).encode('utf-8')
-            request["token"] = hashlib.sha512(msg).hexdigest()
-        else:
-            msg = request.get("account", "") + request.get("login", "") + api.SALT
-            msg = msg.encode('utf-8')
-            request["token"] = hashlib.sha512(msg).hexdigest()
 
     def test_required_nullable_field(self):
         field = api.CharField(required=True, nullable=True)
@@ -355,7 +356,7 @@ class RequestTestSuite(unittest.TestCase):
         {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "token": "sdd", "arguments": {}}
     ])
     def test_auth_valid(self, args):
-        self.set_valid_auth(args)
+        set_valid_auth(args)
         request = api.MethodRequest(args)
         self.assertTrue(api.check_auth(request))
 
@@ -370,7 +371,7 @@ class RequestTestSuite(unittest.TestCase):
         {"account": "horns&hoofs", "login": "admin", "method": "online_score", "token": "", "arguments": {}},
     ])
     def test_auth_admin_valid(self, args):
-        self.set_valid_auth(args)
+        set_valid_auth(args)
         request = api.MethodRequest(args)
         self.assertTrue(api.check_auth(request))
 
@@ -387,7 +388,7 @@ class RequestTestSuite(unittest.TestCase):
         {"account": "horns&hoofs", "login": "admin", "method": "online_scre", "token": "", "arguments": {}},
     ])
     def test_method_fail_method(self, request):
-        self.set_valid_auth(request)
+        set_valid_auth(request)
         _, code = self.get_response(request)
         self.assertEqual(api.NOT_FOUND, code)
 
@@ -416,14 +417,14 @@ class RequestTestSuite(unittest.TestCase):
     ])
     def test_method_online_score(self, arguments):
         request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
+        set_valid_auth(request)
         _, code = self.get_response(request)
         self.assertEqual(code, api.OK)
 
     def test_ok_score_admin_request(self):
         arguments = {"phone": "79995008811", "email": "tt@tt"}
         request = {"account": "horns&hoofs", "login": "admin", "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
+        set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
         score = response.get("score")
@@ -436,7 +437,7 @@ class RequestTestSuite(unittest.TestCase):
     ])
     def test_method_client_interests(self, arguments):
         request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
-        self.set_valid_auth(request)
+        set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
 
@@ -554,23 +555,79 @@ class StoreTestSuite(unittest.TestCase):
 class MethodTestSuiteWithStore(unittest.TestCase):
 
     def setUp(self):
+        self.context = {}
+        self.headers = {}
+
         self.store = store.Store()
         self.store.flush()
 
-    def test_online_score(self):
-        pass
+    @cases([
+        {"phone": "79175002040", "email": "tt@tt"},
+        {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"},
+    ])
+    def test_method_online_score(self, arguments):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        set_valid_auth(request)
+        _, code = api.method_handler({"body": request, "headers": self.headers},
+                                     self.context,
+                                     self.store)
 
-    def test_online_score_invalid_request(self):
-        pass
+        self.assertEqual(code, api.OK)
 
-    def test_online_score_store_unavailable(self):
-        pass
+    @cases([
+        {"phone": "79175002040", "email": "tt@tt"},
+        {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"},
+    ])
+    def test_online_score_store_unavailable(self, arguments):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        set_valid_auth(request)
+
+        with mock.patch('redis.StrictRedis.get') as redis_get:
+            redis_get.side_effect = redis.ConnectionError
+            _, code = api.method_handler({"body": request, "headers": self.headers},
+                                         self.context,
+                                         self.store)
+
+            self.assertEqual(code, api.OK)
 
     def test_client_interests(self):
-        pass
+        interests = {
+            1: ['football', 'baseball'],
+            2: ['gym']
+        }
+        for key, value in interests.items():
+            self.store.set('i:{}'.format(key), json.dumps(value))
 
-    def test_client_interests_store_unavaliable(self):
-        pass
+        ids = list(interests.keys())
+        arguments = {"client_ids": ids, "date": "19.07.2017"}
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
+        set_valid_auth(request)
+        response, code = api.method_handler({"body": request, "headers": self.headers},
+                                            self.context,
+                                            self.store)
+
+        self.assertEqual(code, api.OK)
+        self.assertDictEqual(response, interests)
+
+    def test_client_interests_store_unavailable(self):
+        interests = {
+            1: ['football', 'baseball'],
+            2: ['gym']
+        }
+        for key, value in interests.items():
+            self.store.set('i:{}'.format(key), json.dumps(value))
+
+        ids = list(interests.keys())
+        arguments = {"client_ids": ids, "date": "19.07.2017"}
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
+        set_valid_auth(request)
+
+        with mock.patch('redis.StrictRedis.get') as redis_get:
+            redis_get.side_effect = redis.ConnectionError
+            self.assertRaises(store.StoreConnectionError,
+                              api.method_handler,
+                              {"body": request, "headers": self.headers},
+                              self.context, self.store)
 
 
 if __name__ == "__main__":
