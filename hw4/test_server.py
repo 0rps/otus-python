@@ -6,7 +6,7 @@ import hashlib
 import os
 import json
 from datetime import datetime
-from http.client import  HTTPConnection, HTTPException, HTTPMessage
+from http.client import HTTPConnection
 
 import api
 import store
@@ -38,7 +38,8 @@ class TestSuite(unittest.TestCase):
         self.redis = self.start_redis()
 
     def start_redis(self):
-        redis_proc = subprocess.Popen('redis-server', stdout=subprocess.DEVNULL)
+        redis_proc = subprocess.Popen('redis-server',
+                                      stdout=subprocess.DEVNULL)
 
         counter = 0
         while True:
@@ -97,10 +98,12 @@ class TestSuite(unittest.TestCase):
 
     def set_valid_auth(self, request):
         if request.get("login") == api.ADMIN_LOGIN:
-            msg = (datetime.now().strftime("%Y%m%d%H") + api.ADMIN_SALT).encode('utf-8')
+            msg = (datetime.now().strftime("%Y%m%d%H") +
+                   api.ADMIN_SALT).encode('utf-8')
             request["token"] = hashlib.sha512(msg).hexdigest()
         else:
-            msg = request.get("account", "") + request.get("login", "") + api.SALT
+            msg = request.get("account", "") \
+                  + request.get("login", "") + api.SALT
             msg = msg.encode('utf-8')
             request["token"] = hashlib.sha512(msg).hexdigest()
 
@@ -139,8 +142,10 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(code, api.NOT_FOUND)
 
     def test_online_score_valid(self):
-        arguments = {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"}
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        arguments = {"gender": 1, "birthday": "01.01.2000",
+                     "first_name": "a", "last_name": "b"}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "online_score", "arguments": arguments}
         self.set_valid_auth(request)
 
         code, response = self.make_request(request)
@@ -154,8 +159,10 @@ class TestSuite(unittest.TestCase):
         self.assertAlmostEqual(score_1, score_2)
 
     def test_online_score_valid_with_trouble_cache(self):
-        arguments = {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"}
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        arguments = {"gender": 1, "birthday": "01.01.2000",
+                     "first_name": "a", "last_name": "b"}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "online_score", "arguments": arguments}
         self.set_valid_auth(request)
 
         code, response = self.make_request(request)
@@ -177,8 +184,10 @@ class TestSuite(unittest.TestCase):
         self.assertAlmostEqual(score_2, score_3)
 
     def test_online_score_validation_error(self):
-        arguments = {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"}
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        arguments = {"gender": 1, "birthday": "01.01.2000",
+                     "first_name": "a", "last_name": "b"}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "online_score", "arguments": arguments}
 
         arguments['gender'] = 4
         arguments['birthday'] = '01.01.1910'
@@ -188,8 +197,11 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(code, api.INVALID_REQUEST)
 
     def test_online_score_auth_error(self):
-        arguments = {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"}
-        request = {'token': '123456', "account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        arguments = {"gender": 1, "birthday": "01.01.2000",
+                     "first_name": "a", "last_name": "b"}
+        request = {'token': '123456', "account": "horns&hoofs",
+                   "login": "h&f", "method": "online_score",
+                   "arguments": arguments}
 
         code, response = self.make_request(request)
         self.assertEqual(code, api.FORBIDDEN)
@@ -202,7 +214,9 @@ class TestSuite(unittest.TestCase):
 
         ids = list(interests.keys())
         arguments = {"client_ids": ids, "date": "19.07.2017"}
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "clients_interests",
+                   "arguments": arguments}
         self.set_valid_auth(request)
 
         code, response = self.make_request(request)
@@ -216,7 +230,9 @@ class TestSuite(unittest.TestCase):
 
         ids = list(interests.keys())
         arguments = {"client_ids": ids, "date": "19.07.2017"}
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "clients_interests",
+                   "arguments": arguments}
         self.set_valid_auth(request)
 
         self.redis.kill()

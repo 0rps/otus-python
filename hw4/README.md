@@ -5,14 +5,23 @@ Server for getting scoring info
 #### Using:
 ##### To run tests:
 
+Before run these tests you must start redis server at your computer at 6379 port
+
 ```
     python3 test.py
+```
+
+Starting integration tests. These tests start, flush and terminate redis server (default port 6379), also start
+and terminate server at 8080 port.
+
+```
+python3 test_server.py
 ```
 
 ##### To run server:
 
 ```
-    python3 api.py [--log=log_file] [--port=your_port (default is 8080)]
+    python3 api.py [--log=log_file] [--port=your_port (default is 8080)] [--store=addr:port (example 127.0.0.1:6379)]
 ```
 
 ##### Simple request to api

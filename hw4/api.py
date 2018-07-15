@@ -383,7 +383,7 @@ def method_handler(request, ctx, store):
         return None, NOT_FOUND
     logging.info('Method request: {}'.format(method_request.method))
     response, code = concrete_method_handler(method_request,
-                                                  ctx, store)
+                                             ctx, store)
     return response, code
 
 

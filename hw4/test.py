@@ -43,7 +43,8 @@ class StubStore:
 
 def set_valid_auth(request):
     if request.get("login") == api.ADMIN_LOGIN:
-        msg = (datetime.now().strftime("%Y%m%d%H") + api.ADMIN_SALT).encode('utf-8')
+        msg = (datetime.now().strftime("%Y%m%d%H") +
+               api.ADMIN_SALT).encode('utf-8')
         request["token"] = hashlib.sha512(msg).hexdigest()
     else:
         msg = request.get("account", "") + request.get("login", "") + api.SALT
@@ -58,13 +59,15 @@ class RequestTestSuite(unittest.TestCase):
         self.store = StubStore()
 
     def get_response(self, request):
-        return api.method_handler({"body": request, "headers": self.headers}, self.context, self.store)
+        return api.method_handler({"body": request, "headers": self.headers},
+                                  self.context, self.store)
 
     def test_empty_request(self):
         _, code = self.get_response({})
         self.assertEqual(api.INVALID_REQUEST, code)
 
-    def create_class_with_field(self, _field, field_value=None, init_by_value=True):
+    def create_class_with_field(self, _field,
+                                field_value=None, init_by_value=True):
         class RequestTestClass(api.Request):
             field = _field
 
@@ -77,17 +80,23 @@ class RequestTestSuite(unittest.TestCase):
 
     def test_required_nullable_field(self):
         field = api.CharField(required=True, nullable=True)
-        inst = self.create_class_with_field(field, field_value=None, init_by_value=False)
+        inst = self.create_class_with_field(field,
+                                            field_value=None,
+                                            init_by_value=False)
         self.assertRaises(api.ValidationError, field.validate, inst)
 
     def test_required_non_nullable_field(self):
         field = api.CharField(required=True, nullable=False)
-        inst = self.create_class_with_field(field, field_value=None, init_by_value=False)
+        inst = self.create_class_with_field(field,
+                                            field_value=None,
+                                            init_by_value=False)
         self.assertRaises(api.ValidationError, field.validate, inst)
 
     def test_non_required_non_nullable_field(self):
         field = api.CharField(required=False, nullable=False)
-        inst = self.create_class_with_field(field, field_value=None, init_by_value=True)
+        inst = self.create_class_with_field(field,
+                                            field_value=None,
+                                            init_by_value=True)
         self.assertRaises(api.ValidationError, field.validate, inst)
 
     @cases(['19.12.2001', 'abc', '+777777', ''])
@@ -315,7 +324,8 @@ class RequestTestSuite(unittest.TestCase):
                 self.arguments = args
                 self.is_admin = None
 
-        args = {'phone': '78889990099', 'email': 'tt@tt', 'gender': None, 'first_name': ''}
+        args = {'phone': '78889990099', 'email': 'tt@tt',
+                'gender': None, 'first_name': ''}
         res = ['phone', 'email']
 
         with mock.patch('scoring.get_score') as gs:
@@ -333,7 +343,8 @@ class RequestTestSuite(unittest.TestCase):
                 self.arguments = args
                 self.is_admin = True
 
-        args = {'phone': '78889990099', 'email': 'tt@tt', 'gender': None, 'first_name': ''}
+        args = {'phone': '78889990099', 'email': 'tt@tt',
+                'gender': None, 'first_name': ''}
 
         with mock.patch('scoring.get_score') as gs:
             gs.return_value = None
@@ -416,14 +427,16 @@ class RequestTestSuite(unittest.TestCase):
          "first_name": "a", "last_name": "b"},
     ])
     def test_method_online_score(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "online_score", "arguments": arguments}
         set_valid_auth(request)
         _, code = self.get_response(request)
         self.assertEqual(code, api.OK)
 
     def test_ok_score_admin_request(self):
         arguments = {"phone": "79995008811", "email": "tt@tt"}
-        request = {"account": "horns&hoofs", "login": "admin", "method": "online_score", "arguments": arguments}
+        request = {"account": "horns&hoofs", "login": "admin",
+                   "method": "online_score", "arguments": arguments}
         set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -436,7 +449,8 @@ class RequestTestSuite(unittest.TestCase):
         {"client_ids": [0]},
     ])
     def test_method_client_interests(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "clients_interests", "arguments": arguments}
         set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code)
@@ -498,7 +512,8 @@ class StoreTestSuite(unittest.TestCase):
         connection_pool.max_connections = 1
         con1 = connection_pool.get_connection('NO_CMD')
         # check this
-        self.assertRaises(redis.ConnectionError, connection_pool.get_connection, "NO_CMD")
+        self.assertRaises(redis.ConnectionError,
+                          connection_pool.get_connection, "NO_CMD")
         # check assert
         self.assertRaises(store.StoreConnectionError, self.store.get, key)
 
@@ -570,7 +585,8 @@ class MethodTestSuiteWithStore(unittest.TestCase):
         {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"},
     ])
     def test_method_online_score(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "online_score", "arguments": arguments}
         set_valid_auth(request)
         _, code = api.method_handler({"body": request, "headers": self.headers},
                                      self.context,
@@ -583,12 +599,14 @@ class MethodTestSuiteWithStore(unittest.TestCase):
         {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"},
     ])
     def test_online_score_store_unavailable(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "online_score", "arguments": arguments}
         set_valid_auth(request)
 
         with mock.patch('redis.StrictRedis.get') as redis_get:
             redis_get.side_effect = redis.ConnectionError
-            _, code = api.method_handler({"body": request, "headers": self.headers},
+            _, code = api.method_handler({"body": request,
+                                          "headers": self.headers},
                                          self.context,
                                          self.store)
 
@@ -604,7 +622,8 @@ class MethodTestSuiteWithStore(unittest.TestCase):
 
         ids = list(interests.keys())
         arguments = {"client_ids": ids, "date": "19.07.2017"}
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "clients_interests", "arguments": arguments}
         set_valid_auth(request)
         response, code = api.method_handler({"body": request, "headers": self.headers},
                                             self.context,
@@ -623,7 +642,8 @@ class MethodTestSuiteWithStore(unittest.TestCase):
 
         ids = list(interests.keys())
         arguments = {"client_ids": ids, "date": "19.07.2017"}
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
+        request = {"account": "horns&hoofs", "login": "h&f",
+                   "method": "clients_interests", "arguments": arguments}
         set_valid_auth(request)
 
         with mock.patch('redis.StrictRedis.get') as redis_get:
