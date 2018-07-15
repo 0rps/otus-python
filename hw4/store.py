@@ -30,8 +30,26 @@ class StoreConnection:
 
     def get(self, key):
         value = self._reconnect_wrapper(self.conn.get, [key])
-        value = value.decode('utf-8')
-        return json.loads(value)
+        return self._decode(value)
+
+    def set(self, key, value, expire_time=None):
+        value = self._encode(value)
+        self._reconnect_wrapper(self.conn.set, [key, value])
+        if expire_time:
+            self._reconnect_wrapper(self.conn.expire, [key, expire_time])
+
+    def flush(self):
+        self.conn.flushdb()
+
+    @staticmethod
+    def _encode(value):
+        return json.dumps(value).encode('utf-8')
+
+    @staticmethod
+    def _decode(value):
+        if value is None:
+            return None
+        return json.loads(value.decode('utf-8'))
 
     def _reconnect_wrapper(self, func, args):
         attempts = 1 + self._reconnect_attempts
@@ -45,31 +63,45 @@ class StoreConnection:
 
         raise StoreConnectionError()
 
-    def set(self, key, value):
-        value = json.dumps(value)
-        self._reconnect_wrapper(self.conn.set, [key, value])
-
-    def service_flush(self):
-        pass
-
 
 class Store:
 
     def __init__(self, host='localhost', port=6379):
-        self.store = StoreConnection(db_index=0, host=host, port=port,
-                                     socket_timeout=0.2,
-                                     reconnect_delay=0.2,
-                                     reconnect_attempts=5)
+        self.persistent = StoreConnection(db_index=0, host=host, port=port,
+                                          socket_timeout=0.2,
+                                          reconnect_delay=0.2,
+                                          reconnect_attempts=5)
+
+        self.cache = StoreConnection(db_index=1, host=host, port=port)
+        self._is_flush_cache = False
 
     def get(self, key):
-        return self.store.get(key)
+        return self.persistent.get(key)
 
     def set(self, key, value):
-        self.store.set(key, value)
+        self.persistent.set(key, value)
 
     def cache_get(self, key):
-        pass
+        try:
+            value = self.cache.get(key)
+            return value
+        except StoreConnectionError:
+            pass
 
     def cache_set(self, key, value, expiration_time):
-        pass
+        if expiration_time == -1:
+            expiration_time = None
 
+        try:
+            self._flush_cache()
+            self.cache_set(key, value, expiration_time)
+        except StoreConnectionError:
+            self._is_flush_cache = True
+            return
+
+    def _flush_cache(self):
+        if not self._is_flush_cache:
+            return
+
+        self.cache.flush()
+        self._is_flush_cache = False

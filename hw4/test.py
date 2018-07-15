@@ -2,11 +2,12 @@ import unittest
 import functools
 import hashlib
 import json
-from store import Store
+import redis
 from unittest import mock
 from datetime import datetime
 from datetime import timedelta
 
+import store
 import api
 import scoring
 
@@ -443,7 +444,7 @@ class RequestTestSuite(unittest.TestCase):
 class StoreTestSuite(unittest.TestCase):
 
     def setUp(self):
-        self.store = Store()
+        self.store = store.Store()
 
     @cases([
         ('key_1', '1'),
@@ -460,24 +461,61 @@ class StoreTestSuite(unittest.TestCase):
         else:
             self.assertEqual(value, self.store.get(key))
 
-    def test_cache(self):
-        pass
-        # self.store.cache_set('key_1', 1, -1)
-        # self.store.cache_set('key_2', 2, 30)
-        # self.store.cache_set('key_3', 3, 30)
-        #
-        # self.assertEqual(self.store.cache_get('key_1'), None)
-        # self.assertEqual(self.store.cache_get('key_2'), 2)
-        # self.assertEqual(self.store.cache_get('key_3'), 3)
-        #
-        # self.assertEqual(self.store.get('key_4'), None)
+    def test_get_failed(self):
+        self.assertEqual(self.store.get('non-existing-key-1298'), None)
 
-    def test_set_get_with_reconnect(self):
-        pass
+    def test_update_key(self):
+        key = 'key_1'
+        value_1 = 88
+        value_2 = 'test_value'
+
+        self.store.set(key, value_1)
+        self.assertEqual(self.store.get(key), value_1)
+
+        self.store.set(key, value_2)
+        self.assertEqual(self.store.get(key), value_2)
+
+    def test_set_get_with_retry(self):
+        key = 'key_1'
+        value = 'value_1'
+
+        self.store.set(key, value)
+
+        # Test retry attempts
+        with mock.patch('redis.StrictRedis.get') as redis_get:
+            redis_get.side_effect = [redis.ConnectionError,
+                                     redis.TimeoutError,
+                                     store.StoreConnection._encode(value)]
+            self.assertEqual(self.store.get(key), value)
+
+        # Test failed connection
+        connection_pool = self.store.persistent.conn.connection_pool
+        # get all connections
+        connection_pool.max_connections = 1
+        con1 = connection_pool.get_connection('NO_CMD')
+        # check this
+        self.assertRaises(redis.ConnectionError, connection_pool.get_connection, "NO_CMD")
+        # check assert
+        self.assertRaises(store.StoreConnectionError, self.store.get, key)
+
+        # Test success connection after disconnection
+        # release con1
+        connection_pool.release(con1)
+        connection_pool.disconnect()
+        self.assertEqual(self.store.get(key), value)
 
     def test_set_get_unavailable_store(self):
-        pass
+        key = 'key_1'
+        value = 'value_1'
+        self.store.set(key, value)
 
+        # Test retry attempts
+        with mock.patch('redis.StrictRedis.get') as redis_get:
+            redis_get.side_effect = redis.ConnectionError
+            self.assertRaises(store.StoreConnectionError, self.store.get, key)
+
+    def test_cache(self):
+        pass
 
     def test_cache_expiration(self):
         pass
