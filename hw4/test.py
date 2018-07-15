@@ -445,6 +445,7 @@ class StoreTestSuite(unittest.TestCase):
 
     def setUp(self):
         self.store = store.Store()
+        self.store.flush()
 
     @cases([
         ('key_1', '1'),
@@ -514,23 +515,47 @@ class StoreTestSuite(unittest.TestCase):
             redis_get.side_effect = redis.ConnectionError
             self.assertRaises(store.StoreConnectionError, self.store.get, key)
 
-    def test_cache(self):
-        pass
+    @cases([
+        ('key_1', '1', 30, '1'),
+        ('key_2', 2, -30, None),
+        ('key_3', [1, '5'], 30,  [1, '5'])
+    ])
+    def test_cache(self, key, value, time, result):
+        self.store.cache_set(key, value, time)
+        cache_result = self.store.cache_get(key)
 
-    def test_cache_expiration(self):
-        pass
+        if isinstance(result, list):
+            self.assertListEqual(cache_result, result)
+        else:
+            self.assertEqual(cache_result, result)
 
-    def test_cache_unavailable_store(self):
-        pass
+    def test_cache_clear_after_disconnection(self):
+        self.store.cache_set('key_1', '1', 60)
+        self.store.cache_set('key_2', '2', 60)
 
-    def test_get_store(self):
-        pass
+        # test disconnection
+        with mock.patch('redis.StrictRedis.get') as redis_get:
+            redis_get.side_effect = redis.ConnectionError
+            self.assertEqual(self.store.cache_get('key_1'), None)
 
-    def test_get_interests(self):
-        pass
+        # test right results
+        self.assertEqual(self.store.cache_get('key_1'), '1')
+
+        # test set at disconnection
+        with mock.patch('redis.StrictRedis.set') as redis_set:
+            redis_set.side_effect = redis.ConnectionError
+            self.store.cache_set('key_1', '11', 60)
+
+        # test that db flushed
+        self.assertEqual(self.store.cache_get('key_1'), None)
+        self.assertEqual(self.store.cache_get('key_2'), None)
 
 
 class MethodTestSuiteWithStore(unittest.TestCase):
+
+    def setUp(self):
+        self.store = store.Store()
+        self.store.flush()
 
     def test_online_score(self):
         pass
