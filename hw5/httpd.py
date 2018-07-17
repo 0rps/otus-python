@@ -5,46 +5,10 @@ import threading
 
 from optparse import OptionParser
 
-
-DATASIZE = 128
-
-
-class ParseException(Exception):
-    pass
+from . import http
 
 
-class HttpResponse:
-
-    def __init__(self):
-        pass
-
-
-class HttpRequest:
-
-    def __init__(self, request_type, route, headers, body=None):
-        self._type = request_type
-        self._route = route
-        self._headers = headers
-        self._body = body
-
-    @property
-    def type(self):
-        return self._type
-
-    @property
-    def route(self):
-        return self._route
-
-    @property
-    def headers(self):
-        return self._headers
-
-    @property
-    def body(self):
-        return self._body
-
-    def is_valid(self):
-        return True
+PACKAGE_SIZE = 128
 
 
 def handle_get_request(request):
@@ -74,52 +38,11 @@ def handle_unknown_request(request):
     return response
 
 
-class HttpRequestBuffer:
-
-    def __init__(self):
-        self.data = bytearray()
-
-    def add_data(self, bytes_data):
-        self.data.extend(bytes_data)
-
-    def pop_request(self):
-        if b'\r\n\r\n' in self.data:
-            logging.info('Double-n sequence detected')
-            return self._parse_request()
-
-    def _parse_request(self):
-        data = self.data.decode()
-        head, body = data.split('\r\n\r\n')[:2]
-
-        head_lines = head.split('\r\n')
-        request_type, route, version = head_lines[0].split(' ')
-
-        headers = {}
-        for line in head_lines[1:]:
-            key, value = line.split(': ')
-            headers[key] = value
-
-        if route.endswith('/'):
-            route += 'index.html'
-
-        if 'Content-Length' not in headers:
-            return HttpRequest(request_type, route, headers)
-
-        length = int(headers['Content-length'])
-        if len(body) > length:
-            body = body[:length]
-            request_length = len(head) + length + 4
-            self.data = self.data[request_length:]
-        elif len(body) < length:
-            return
-
-        return HttpRequest(request_type, route, headers, body)
-
-
 class ClientWorker:
+
     def __init__(self, client_socket):
         self.socket = client_socket
-        self._buffer = HttpRequestBuffer()
+        self._buffer = http.HttpRequestBuffer()
 
     def __call__(self, *args, **kwargs):
         handler_map = {
@@ -136,7 +59,7 @@ class ClientWorker:
     def _receive_request(self):
         request = self._buffer.pop_request()
         while not request:
-            chunk = self.socket.recv(DATASIZE)
+            chunk = self.socket.recv(PACKAGE_SIZE)
             if chunk == b'':
                 raise RuntimeError("socket connection broken")
             self._buffer.add_data(chunk)
@@ -149,12 +72,12 @@ class ClientWorker:
 
         logging.info('Try to send response')
         while total_sent != length:
-            sent_count = min(len(response), DATASIZE)
+            sent_count = min(len(response), PACKAGE_SIZE)
             sent_bytes = self.socket.send(response, sent_count)
             total_sent += sent_bytes
             response = response[sent_bytes:]
 
-        logging.info('Reponse sent')
+        logging.info('Response sent')
 
 
 class Listener:
