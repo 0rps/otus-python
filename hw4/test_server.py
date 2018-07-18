@@ -27,7 +27,10 @@ class TestSuite(unittest.TestCase):
 
         self.store = store.Store(self.redis_server_host,
                                  self.redis_server_port)
-        self.store.flush()
+
+        # flush store
+        self.store.persistent.flush()
+        self.store.cache.flush()
 
     def tearDown(self):
         self.redis.kill()

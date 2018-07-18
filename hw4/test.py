@@ -462,7 +462,8 @@ class StoreTestSuite(unittest.TestCase):
         self.store = store.Store()
 
     def tearDown(self):
-        self.store.flush()
+        self.store.persistent.flush()
+        self.store.cache.flush()
 
     @cases([
         ('key_1', '1'),
@@ -578,7 +579,8 @@ class MethodTestSuiteWithStore(unittest.TestCase):
         self.store = store.Store()
 
     def tearDown(self):
-        self.store.flush()
+        self.store.persistent.flush()
+        self.store.cache.flush()
 
     @cases([
         {"phone": "79175002040", "email": "tt@tt"},

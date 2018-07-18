@@ -95,11 +95,6 @@ class Store:
             self.cache.set(key, value, expiration_time)
         except StoreConnectionError:
             self._is_flush_cache = True
-            return
-
-    def flush(self):
-        self.persistent.flush()
-        self.cache.flush()
 
     def _flush_cache(self):
         if not self._is_flush_cache:
