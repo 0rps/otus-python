@@ -12,8 +12,8 @@ class UnsupportedHttpVersion(HttpRequestError):
 class HttpResponse:
 
     content_map = {
-        'html': 'text/html; charser=utf-8',
-        'css': 'text/css; charser=utf-8',
+        'html': 'text/html; charset=utf-8',
+        'css': 'text/css; charset=utf-8',
         'js': 'application/javascript; charser=utf-8',
         'jpeg': 'image/jpeg',
         'jpg': 'image/jpeg',

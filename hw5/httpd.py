@@ -1,3 +1,4 @@
+import os
 import socket
 import logging
 import sys
@@ -11,37 +12,54 @@ from . import http
 PACKAGE_SIZE = 128
 
 
-def handle_get_request(request):
+def handle_get_request(root_dir, request):
+    response = handle_head_request(root_dir, request)
+    if response.code != 200:
+        return response
 
-    content = 'My brother is good man'
-    ext = 'html'
+    file_path = root_dir + request.route
+    with open(file_path, 'rb') as f:
+        content = f.readall()
 
-    code = 200
+    ext = os.path.basename(file_path).split('.')[-1]
+    response.file_type = ext
+    response.body = content
+    return response
+
+
+def handle_head_request(root_dir, request):
     headers = {
-        'Date': 'Sun, 18 Oct 2012 10:36:20 GMT',
-        'Server': 'Apache/2.2.14 (Win32)',
-        'Connection': 'Closed',
+        'Connection': 'Closed'
     }
 
-    response = http.HttpResponse(code, headers, content, ext)
-    return response.to_bytes()
+    file_path = os.path.normpath(root_dir + request.route)
 
+    if not os.path.exists(file_path):
+        code = 404
+    elif not file_path.startswith(root_dir):
+        code = 403
+    else:
+        try:
+            f = open(file_path, 'rb')
+            f.close()
+            code = 200
+        except IOError:
+            code = 403
 
-def handle_head_request(request):
-    code = 200
-    headers = {
-        'Date': 'Sun, 18 Oct 2012 10:36:20 GMT',
-        'Server': 'Apache/2.2.14 (Win32)',
-        'Connection': 'Closed',
-    }
+    if code != 200:
+        return http.HttpResponse(code, headers)
+
+    headers['Date'] = 'Sun, 18 Oct 2012 10:36:20 GMT'
+    headers['Server'] = 'Apache/2.2.14 (Win32)'
+
     response = http.HttpResponse(code, headers)
-    return response.to_bytes()
+    return response
 
 
 def handle_unknown_request(request):
     headers = {'Connection': 'Closed'}
     response = http.HttpResponse(405, headers)
-    return response.to_bytes()
+    return response
 
 
 class ClientWorker:
@@ -60,7 +78,7 @@ class ClientWorker:
         request = self._receive_request()
         handler = handler_map.get(request.type) or handle_unknown_request
         response = handler(request=request)
-        self._send_response(response)
+        self._send_response(response.to_bytes())
 
     def _receive_request(self):
         request = self._buffer.pop_request()
