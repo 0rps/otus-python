@@ -34,17 +34,14 @@ def handle_head_request(root_dir, request):
 
     file_path = os.path.normpath(root_dir + request.route)
 
-    if not os.path.exists(file_path):
+    if not file_path.startswith(root_dir):
+        code = 403
+    elif not os.path.exists(file_path):
         code = 404
-    elif not file_path.startswith(root_dir):
+    elif not os.access(file_path, os.R_OK):
         code = 403
     else:
-        try:
-            f = open(file_path, 'rb')
-            f.close()
-            code = 200
-        except IOError:
-            code = 403
+        code = 200
 
     if code != 200:
         return http.HttpResponse(code, headers)
