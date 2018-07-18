@@ -12,30 +12,36 @@ PACKAGE_SIZE = 128
 
 
 def handle_get_request(request):
-    response = b'HTTP/1.1 400 Bad Request\r\n' \
-               b'Date: Sun, 18 Oct 2012 10:36:20 GMT\r\n' \
-               b'Server: Apache/2.2.14 (Win32)\r\n' \
-               b'Content-Type: text/html; charset=iso-8859-1\r\n' \
-               b'Connection: Closed\r\n\r\n'
-    return response
+
+    content = 'My brother is good man'
+    ext = 'html'
+
+    code = 200
+    headers = {
+        'Date': 'Sun, 18 Oct 2012 10:36:20 GMT',
+        'Server': 'Apache/2.2.14 (Win32)',
+        'Connection': 'Closed',
+    }
+
+    response = http.HttpResponse(code, headers, content, ext)
+    return response.to_bytes()
 
 
 def handle_head_request(request):
-    response = b'HTTP/1.1 400 Bad Request\r\n' \
-               b'Date: Sun, 18 Oct 2012 10:36:20 GMT\r\n' \
-               b'Server: Apache/2.2.14 (Win32)\r\n' \
-               b'Content-Type: text/html; charset=iso-8859-1\r\n' \
-               b'Connection: Closed\r\n\r\n'
-    return response
+    code = 200
+    headers = {
+        'Date': 'Sun, 18 Oct 2012 10:36:20 GMT',
+        'Server': 'Apache/2.2.14 (Win32)',
+        'Connection': 'Closed',
+    }
+    response = http.HttpResponse(code, headers)
+    return response.to_bytes()
 
 
 def handle_unknown_request(request):
-    response = b'HTTP/1.1 400 Bad Request\r\n' \
-               b'Date: Sun, 18 Oct 2012 10:36:20 GMT\r\n' \
-               b'Server: Apache/2.2.14 (Win32)\r\n' \
-               b'Content-Type: text/html; charset=iso-8859-1\r\n' \
-               b'Connection: Closed\r\n\r\n'
-    return response
+    headers = {'Connection': 'Closed'}
+    response = http.HttpResponse(405, headers)
+    return response.to_bytes()
 
 
 class ClientWorker:

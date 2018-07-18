@@ -11,14 +11,51 @@ class UnsupportedHttpVersion(HttpRequestError):
 
 class HttpResponse:
 
-    def __init__(self, code, status, headers, body=None):
-        self.code = code
-        self.status = status
-        self.headers = headers
-        self.body = body
+    content_map = {
+        'html': 'text/html; charser=utf-8',
+        'css': 'text/css; charser=utf-8',
+        'js': 'application/javascript; charser=utf-8',
+        'jpeg': 'image/jpeg',
+        'jpg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'swf': 'application/x-shockwave-flash'
+    }
 
-    def to_bytearray(self):
-        pass
+    codes_map = {
+        200: 'OK',
+        403: 'Forbidden',
+        404: 'Not Found',
+        405: 'Method Not Allowed',
+    }
+
+    def __init__(self, code, headers, file_type=None, body=None):
+        self.code = code
+        self.headers = headers or {}
+        self.body = body
+        self.file_type = file_type
+
+    def to_bytes(self):
+        head = '{} {} {}'.format(HTTP_VERSION, self.code, self.codes_map[self.code])
+
+        body = None
+        if self.body:
+            body = self.body.encode('utf-8') if isinstance(self.body, str) else self.body
+            mime_type = self.content_map.get(self.file_type) or 'application/octet-stream'
+            body_length = len(body)
+
+            self.headers['Content-Length'] = body_length
+            self.headers['Content-Type'] = mime_type
+
+        headers = ['{}: {}'.format(k, v) for k, v in self.headers.items()]
+
+        response = '\r\n'.join([head, *headers]) + '\r\n\r\n'
+
+        if body:
+            response = response.encode('utf-8') + body
+        else:
+            response = response.encode('utf-8')
+        return response
 
 
 class HttpRequest:
@@ -68,8 +105,8 @@ class HttpRequestBuffer:
         request_line = head_lines[0]
         headers = {}
         for line in head_lines[1:]:
-            key, value = line.split(': ')
-            headers[key] = value
+            key, value = line.split(':')
+            headers[key] = value.strip()
 
         if 'Content-Length' not in headers:
             return HttpRequest.from_raw_data(request_line, headers, None)
