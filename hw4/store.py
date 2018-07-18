@@ -43,7 +43,7 @@ class StoreConnection:
 
     @staticmethod
     def _encode(value):
-        return json.dumps(value).encode('utf-8')
+        return json.dumps(value)
 
     @staticmethod
     def _decode(value):
