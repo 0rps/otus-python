@@ -2,14 +2,14 @@ import unittest
 import subprocess
 import redis
 import time
-import hashlib
 import os
 import json
-from datetime import datetime
 from http.client import HTTPConnection
 
 import api
 import store
+
+from test_utils import set_valid_auth
 
 
 class TestSuite(unittest.TestCase):
@@ -41,12 +41,12 @@ class TestSuite(unittest.TestCase):
         self.redis = self.start_redis()
 
     def start_redis(self):
-        redis_proc = subprocess.Popen('redis-server',
+        redis_proc = subprocess.Popen(['redis-server', '--port', str(self.redis_server_port)],
                                       stdout=subprocess.DEVNULL)
 
         counter = 0
         while True:
-            sr = redis.StrictRedis()
+            sr = redis.StrictRedis(host=self.redis_server_host, port=self.redis_server_port)
             try:
                 sr.ping()
                 break
@@ -72,7 +72,7 @@ class TestSuite(unittest.TestCase):
                                       self.redis_server_port)
 
         server_cmd_start = ['python3', api_path,
-                            '-p', self.api_server_port,
+                            '-p', str(self.api_server_port),
                             '-s', redis_config]
         server_proc = subprocess.Popen(server_cmd_start)
 
@@ -99,16 +99,8 @@ class TestSuite(unittest.TestCase):
 
         return server_proc
 
-    def set_valid_auth(self, request):
-        if request.get("login") == api.ADMIN_LOGIN:
-            msg = (datetime.now().strftime("%Y%m%d%H") +
-                   api.ADMIN_SALT).encode('utf-8')
-            request["token"] = hashlib.sha512(msg).hexdigest()
-        else:
-            msg = request.get("account", "") \
-                  + request.get("login", "") + api.SALT
-            msg = msg.encode('utf-8')
-            request["token"] = hashlib.sha512(msg).hexdigest()
+    def test_nothing(self):
+        pass
 
     def make_request(self, data, to_json=True, method=None):
         url = method or 'method'
@@ -133,9 +125,6 @@ class TestSuite(unittest.TestCase):
 
         return status, response
 
-    def test_nothing(self):
-        pass
-
     def test_wrond_data(self):
         code, _ = self.make_request("1'2 {]", to_json=False)
         self.assertEqual(code, api.BAD_REQUEST)
@@ -149,7 +138,7 @@ class TestSuite(unittest.TestCase):
                      "first_name": "a", "last_name": "b"}
         request = {"account": "horns&hoofs", "login": "h&f",
                    "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
+        set_valid_auth(request)
 
         code, response = self.make_request(request)
         self.assertEqual(code, api.OK)
@@ -166,7 +155,7 @@ class TestSuite(unittest.TestCase):
                      "first_name": "a", "last_name": "b"}
         request = {"account": "horns&hoofs", "login": "h&f",
                    "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
+        set_valid_auth(request)
 
         code, response = self.make_request(request)
         self.assertEqual(code, api.OK)
@@ -194,7 +183,7 @@ class TestSuite(unittest.TestCase):
 
         arguments['gender'] = 4
         arguments['birthday'] = '01.01.1910'
-        self.set_valid_auth(request)
+        set_valid_auth(request)
 
         code, _ = self.make_request(request)
         self.assertEqual(code, api.INVALID_REQUEST)
@@ -220,7 +209,7 @@ class TestSuite(unittest.TestCase):
         request = {"account": "horns&hoofs", "login": "h&f",
                    "method": "clients_interests",
                    "arguments": arguments}
-        self.set_valid_auth(request)
+        set_valid_auth(request)
 
         code, response = self.make_request(request)
         self.assertEqual(api.OK, code)
@@ -236,7 +225,7 @@ class TestSuite(unittest.TestCase):
         request = {"account": "horns&hoofs", "login": "h&f",
                    "method": "clients_interests",
                    "arguments": arguments}
-        self.set_valid_auth(request)
+        set_valid_auth(request)
 
         self.redis.kill()
         code, response = self.make_request(request)
