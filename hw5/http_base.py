@@ -1,5 +1,6 @@
 import os
 import datetime
+import urllib.parse
 
 import const
 
@@ -79,6 +80,8 @@ class HttpRequest:
 
         if route.endswith('/'):
             route += 'index.html'
+
+        route = urllib.parse.unquote(route)
 
         return HttpRequest(method, route, version, args, headers, body)
 
