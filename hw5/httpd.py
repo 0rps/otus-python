@@ -91,7 +91,7 @@ class Listener:
 
 def main(config):
     workers_count = config['workers']
-    root_dir = os.path.abspath(config['directory'])
+    root_dir = os.path.abspath(config['root_directory'])
     common_queue = queue.Queue()
 
     workers = []
@@ -112,7 +112,8 @@ def read_config(config_file):
 
 if __name__ == '__main__':
     ap = ArgumentParser()
-    ap.add_argument('-d', '--directory', default='.')
+    ap.add_argument('-r', '--root_directory', default='.')
+    ap.add_argument('-w', '--workers', default=5)
     ap.add_argument("-c", "--config", nargs='?', const='config.json', default=None)
     ap.add_argument("-l", "--log", default=None)
     args = ap.parse_args()
@@ -121,7 +122,7 @@ if __name__ == '__main__':
         config = read_config(args.config)
     else:
         config = {
-            'directory': args.directory,
+            'root_directory': args.root_directory,
             'workers': 5,
             'port': 12222,
             'backlog': 10,
