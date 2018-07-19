@@ -1,3 +1,5 @@
+import const
+
 HTTP_VERSION = 'HTTP/1.1'
 
 
@@ -22,13 +24,6 @@ class HttpResponse:
         'swf': 'application/x-shockwave-flash'
     }
 
-    codes_map = {
-        200: 'OK',
-        403: 'Forbidden',
-        404: 'Not Found',
-        405: 'Method Not Allowed',
-    }
-
     def __init__(self, code, headers, file_type=None, body=None):
         self.code = code
         self.headers = headers or {}
@@ -36,7 +31,7 @@ class HttpResponse:
         self.file_type = file_type
 
     def to_bytes(self):
-        head = '{} {} {}'.format(HTTP_VERSION, self.code, self.codes_map[self.code])
+        head = '{} {} {}'.format(HTTP_VERSION, self.code, const.STATUS_MAP[self.code])
 
         body = None
         if self.body:
@@ -50,7 +45,7 @@ class HttpResponse:
         headers = ['{}: {}'.format(k, v) for k, v in self.headers.items()]
 
         response = '\r\n'.join([head, *headers]) + '\r\n\r\n'
-
+        print(response)
         if body:
             response = response.encode('utf-8') + body
         else:
@@ -105,7 +100,8 @@ class HttpRequestBuffer:
         request_line = head_lines[0]
         headers = {}
         for line in head_lines[1:]:
-            key, value = line.split(':')
+            index = line.find(':')
+            key, value = line[:index], line[index+1:]
             headers[key] = value.strip()
 
         if 'Content-Length' not in headers:
