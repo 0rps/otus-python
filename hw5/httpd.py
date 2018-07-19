@@ -1,147 +1,107 @@
+from argparse import ArgumentParser
 import os
 import socket
 import logging
-import datetime
 import json
-import sys
 import threading
+import queue
 
 import const
-
-from argparse import ArgumentParser
-
 import http_base as http
 
 PACKAGE_SIZE = 1024
 
 
-def handle_get_request(root_dir, request) -> http.HttpResponse:
-    response = handle_head_request(root_dir, request)
-    if response.code != const.STATUS_OK:
-        return response
-
-    file_path = root_dir + request.route
-    with open(file_path, 'rb') as f:
-        response.body = f.read()
-    return response
-
-
-def handle_head_request(root_dir, request) -> http.HttpResponse:
-
-    file_path = os.path.normpath(root_dir + request.route)
-
-    if not file_path.startswith(root_dir):
-        code = const.STATUS_FORBIDDEN
-    elif not os.path.exists(file_path):
-        code = const.STATUS_NOT_FOUND
-    elif not os.access(file_path, os.R_OK):
-        code = const.STATUS_FORBIDDEN
-    else:
-        code = const.STATUS_OK
-
-    if code != const.STATUS_OK:
-        return http.HttpResponse(code, {})
-
-    date = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S UTC")
-    headers = {
-        'Connection': 'close',
-        'Date': date,
-        'Server': 'MiniServerForOtus v0.1',
-        'Content-Length': os.os.stat(file_path).st_size
-    }
-    ext = os.path.basename(file_path).split('.')[-1]
-
-    response = http.HttpResponse(code, headers, file_type=ext)
-    return response
-
-
-def handle_unknown_request(*args, **kwargs):
-    response = http.HttpResponse(const.STATUS_UNKNOWN_METHOD, {})
-    return response
-
-
 class ClientWorker:
 
-    def __init__(self, client_socket: socket.socket, root_dir: str):
-        self.socket = client_socket
+    def __init__(self, root_dir: str, common_queue: queue.Queue):
+        self.socket = None
+        self.addr = None
+
+        self.buffer = http.HttpRequestBuffer()
         self.root_dir = root_dir
-        self._buffer = http.HttpRequestBuffer()
+        self.queue = common_queue
 
     def __call__(self, *args, **kwargs):
+        logging.info("worker started")
+        while True:
+            client_socket, client_addr = self.queue.get()
+            logging.info("Start handling client: %s", client_addr)
+            self.socket = client_socket
+            self.buffer.clear()
+            try:
+                self._handle_request()
+            except Exception as ex:
+                logging.error("Something went wrong on: %s", client_addr)
+                logging.exception(ex)
+                # close socket
+
+    def _handle_request(self):
         handler_map = {
-            'GET': handle_get_request,
-            'HEAD': handle_head_request,
+            'GET': http.handle_get_request,
+            'HEAD': http.handle_head_request,
         }
 
         # TODO: сделать возможность приема нескольких запросов
         request = self._receive_request()
-        handler = handler_map.get(request.method) or handle_unknown_request
+
+        logging.info("Request: %s %s from %s", request.method, request.route, self.addr)
+
+        handler = handler_map.get(request.method) or http.handle_unknown_request
         response = handler(root_dir=self.root_dir, request=request)
-        self._send_response(response.to_bytes())
+
+        logging.info("Response: %s for %s", response.code, self.addr)
+
+        self._send_response(response)
         self.socket.shutdown(socket.SHUT_RDWR)
 
     def _receive_request(self) -> http.HttpRequest:
-        request = self._buffer.pop_request()
+        request = self.buffer.pop_request()
         while not request:
             chunk = self.socket.recv(PACKAGE_SIZE)
             if chunk == b'':
                 raise RuntimeError("Socket connection broken")
-            self._buffer.add_data(chunk)
-            request = self._buffer.pop_request()
+            self.buffer.add_data(chunk)
+            request = self.buffer.pop_request()
         return request
 
     def _send_response(self, response):
-        total_sent = 0
-        length = len(response)
-
-        logging.info('Try to send response')
-        self.socket.sendall(response)
-        # while total_sent != length:
-        #     sent_bytes = self.socket.sendall(response)
-        #     total_sent += sent_bytes
-        #     response = response[sent_bytes:]
-
-        logging.info('Response sent')
+        self.socket.sendall(response.to_bytes())
 
 
 class Listener:
 
-    def __init__(self, port, workers, backlog, root_dir):
-        root_dir = os.path.abspath(root_dir)
+    def __init__(self, common_queue: queue.Queue, port, backlog):
 
-        self._workers_count = workers
-        self._workers = []
+        self.queue = common_queue
 
-        self._backlog = backlog
-        self._server_addr = ('localhost', port)
-        self._root_dir = os.path.abspath(root_dir)
+        self.backlog = backlog
+        self.server_addr = ('localhost', port)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     def run(self):
-        self.socket.bind(self._server_addr)
-        self.socket.listen(self._backlog)
+        self.socket.bind(self.server_addr)
+        self.socket.listen(self.backlog)
 
         while True:
             connection, client_addr = self.socket.accept()
-            try:
-                self._create_worker(connection, client_addr)
-            except Exception as e:
-                print(e)
-                pass
-
-    def _create_worker(self, connection, client_addr):
-        logging.info("New client: %s", client_addr)
-        worker = ClientWorker(connection, self._root_dir)
-        worker()
-        # thread = threading.Thread(target=worker)
-        # thread.start()
-
-        # self._workers.append(thread)
+            self.queue.put((connection, client_addr))
 
 
 def main(config):
-    listener = Listener(config['port'], config['workers'], config['backlog'], config['directory'])
+    workers_count = config['workers']
+    root_dir = os.path.abspath(config['directory'])
+    common_queue = queue.Queue()
+
+    workers = []
+
+    for _ in range(workers_count):
+        worker = threading.Thread(target=ClientWorker(root_dir, common_queue))
+        workers.append(worker)
+        worker.start()
+
+    listener = Listener(common_queue, config['port'], config['backlog'])
     listener.run()
 
 
@@ -170,7 +130,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(filename=config['log'],
                         level=logging.INFO,
-                        format='[%(asctime)s] %(levelname).1s %(message)s',
+                        format='[%(asctime)s] (%(threadName)-10s) %(levelname).1s %(message)s',
                         datefmt='%Y.%m.%d %H:%M:%S')
 
     logging.info("Start configuration %s", config)

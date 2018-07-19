@@ -1,4 +1,8 @@
+import os
+import datetime
+
 import const
+
 
 HTTP_VERSION = 'HTTP/1.1'
 
@@ -79,6 +83,51 @@ class HttpRequest:
         return HttpRequest(method, route, version, args, headers, body)
 
 
+def handle_get_request(root_dir, request) -> HttpResponse:
+    response = handle_head_request(root_dir, request)
+    if response.code != const.STATUS_OK:
+        return response
+
+    file_path = root_dir + request.route
+    with open(file_path, 'rb') as f:
+        response.body = f.read()
+    return response
+
+
+def handle_head_request(root_dir, request) -> HttpResponse:
+
+    file_path = os.path.normpath(root_dir + request.route)
+
+    if not file_path.startswith(root_dir):
+        code = const.STATUS_FORBIDDEN
+    elif not os.path.exists(file_path):
+        code = const.STATUS_NOT_FOUND
+    elif not os.access(file_path, os.R_OK):
+        code = const.STATUS_FORBIDDEN
+    else:
+        code = const.STATUS_OK
+
+    if code != const.STATUS_OK:
+        return HttpResponse(code, {})
+
+    date = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S UTC")
+    headers = {
+        'Connection': 'close',
+        'Date': date,
+        'Server': 'MiniServerForOtus v0.1',
+        'Content-Length': os.stat(file_path).st_size
+    }
+    ext = os.path.basename(file_path).split('.')[-1]
+
+    response = HttpResponse(code, headers, file_type=ext)
+    return response
+
+
+def handle_unknown_request(*args, **kwargs):
+    response = HttpResponse(const.STATUS_UNKNOWN_METHOD, {})
+    return response
+
+
 class HttpRequestBuffer:
 
     def __init__(self):
@@ -90,6 +139,9 @@ class HttpRequestBuffer:
     def pop_request(self):
         if b'\r\n\r\n' in self.data:
             return self._parse_request()
+
+    def clear(self):
+        self.data = bytearray()
 
     def _parse_request(self):
         data = self.data.decode()
