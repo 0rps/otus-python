@@ -2,12 +2,13 @@ import os
 import socket
 import logging
 import datetime
+import json
 import sys
 import threading
 
 import const
 
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 import http_base as http
 
@@ -26,9 +27,6 @@ def handle_get_request(root_dir, request) -> http.HttpResponse:
 
 
 def handle_head_request(root_dir, request) -> http.HttpResponse:
-    headers = {
-        'Connection': 'close'
-    }
 
     file_path = os.path.normpath(root_dir + request.route)
 
@@ -42,11 +40,15 @@ def handle_head_request(root_dir, request) -> http.HttpResponse:
         code = const.STATUS_OK
 
     if code != const.STATUS_OK:
-        return http.HttpResponse(code, headers)
+        return http.HttpResponse(code, {})
+
     date = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S UTC")
-    headers['Date'] = date
-    headers['Server'] = 'MiniServerForOtus v0.1'
-    headers['Content-Length'] = os.os.stat(file_path).st_size
+    headers = {
+        'Connection': 'close',
+        'Date': date,
+        'Server': 'MiniServerForOtus v0.1',
+        'Content-Length': os.os.stat(file_path).st_size
+    }
     ext = os.path.basename(file_path).split('.')[-1]
 
     response = http.HttpResponse(code, headers, file_type=ext)
@@ -54,8 +56,7 @@ def handle_head_request(root_dir, request) -> http.HttpResponse:
 
 
 def handle_unknown_request(*args, **kwargs):
-    headers = {'Connection': 'close'}
-    response = http.HttpResponse(const.STATUS_UNKNOWN_METHOD, headers)
+    response = http.HttpResponse(const.STATUS_UNKNOWN_METHOD, {})
     return response
 
 
@@ -105,11 +106,14 @@ class ClientWorker:
 
 class Listener:
 
-    def __init__(self, host, port, workers, backlog, root_dir):
+    def __init__(self, port, workers, backlog, root_dir):
+        root_dir = os.path.abspath(root_dir)
+
+        self._workers_count = workers
         self._workers = []
 
         self._backlog = backlog
-        self._server_addr = (host, port)
+        self._server_addr = ('localhost', port)
         self._root_dir = os.path.abspath(root_dir)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -127,7 +131,7 @@ class Listener:
                 pass
 
     def _create_worker(self, connection, client_addr):
-        logging.info("New client: {}".format(client_addr))
+        logging.info("New client: %s", client_addr)
         worker = ClientWorker(connection, self._root_dir)
         worker()
         # thread = threading.Thread(target=worker)
@@ -136,41 +140,42 @@ class Listener:
         # self._workers.append(thread)
 
 
-def main(opts):
-    try:
-        backlog = opts.backlog
-    except AttributeError:
-        backlog = 10
-
-    listener = Listener(opts.interface, opts.port, opts.workers, backlog, opts.directory)
+def main(config):
+    listener = Listener(config['port'], config['workers'], config['backlog'], config['directory'])
     listener.run()
 
 
-def read_config():
-    pass
+def read_config(config_file):
+    with open(config_file, 'r') as f:
+        return json.load(f)
 
 
 if __name__ == '__main__':
-    op = OptionParser()
-    op.add_option("-d", "--directory", action="store")
-    op.add_option("-i", "--interface", action="store", default="localhost")
-    op.add_option("-p", "--port", action="store", default=12222)
-    op.add_option("-w", "--workers", action="store", default=5)
-    op.add_option("-c", "--config", action="store", default=None)
-    op.add_option("-l", "--log", action="store", default=None)
-    (opts, args) = op.parse_args()
+    ap = ArgumentParser()
+    ap.add_argument('-d', '--directory', default='.')
+    ap.add_argument("-c", "--config", nargs='?', const='config.json', default=None)
+    ap.add_argument("-l", "--log", default=None)
+    args = ap.parse_args()
 
-    if opts.config:
-        pass
-        #opts = read_config(opts.confg)
+    if args.config:
+        config = read_config(args.config)
+    else:
+        config = {
+            'directory': args.directory,
+            'workers': 5,
+            'port': 12222,
+            'backlog': 10,
+            'log': args.log
+        }
 
-    logging.basicConfig(filename=opts.log, level=logging.INFO,
+    logging.basicConfig(filename=config['log'],
+                        level=logging.INFO,
                         format='[%(asctime)s] %(levelname).1s %(message)s',
                         datefmt='%Y.%m.%d %H:%M:%S')
 
-
+    logging.info("Start configuration %s", config)
     try:
-        main(opts)
+        main(config)
     except Exception as ex:
         logging.exception(ex)
         raise
