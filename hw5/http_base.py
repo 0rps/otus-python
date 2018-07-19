@@ -50,7 +50,6 @@ class HttpResponse:
         headers = ['{}: {}'.format(k, v) for k, v in self.headers.items()]
 
         response = '\r\n'.join([head, *headers]) + '\r\n\r\n'
-        print(response)
         if body:
             response = response.encode('utf-8') + body
         else:

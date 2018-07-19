@@ -34,6 +34,7 @@ class ClientWorker:
             except Exception as ex:
                 logging.error("Something went wrong on: %s", client_addr)
                 logging.exception(ex)
+            client_socket.close()
                 # close socket
 
     def _handle_request(self):
@@ -123,7 +124,7 @@ if __name__ == '__main__':
     else:
         config = {
             'root_directory': args.root_directory,
-            'workers': 5,
+            'workers': int(args.workers),
             'port': 12222,
             'backlog': 10,
             'log': args.log
