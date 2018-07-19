@@ -1,6 +1,7 @@
 import os
 import socket
 import logging
+import datetime
 import sys
 import threading
 
@@ -20,11 +21,7 @@ def handle_get_request(root_dir, request) -> http.HttpResponse:
 
     file_path = root_dir + request.route
     with open(file_path, 'rb') as f:
-        content = f.read()
-
-    ext = os.path.basename(file_path).split('.')[-1]
-    response.file_type = ext
-    response.body = content
+        response.body = f.read()
     return response
 
 
@@ -46,11 +43,13 @@ def handle_head_request(root_dir, request) -> http.HttpResponse:
 
     if code != const.STATUS_OK:
         return http.HttpResponse(code, headers)
+    date = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S UTC")
+    headers['Date'] = date
+    headers['Server'] = 'MiniServerForOtus v0.1'
+    headers['Content-Length'] = os.os.stat(file_path).st_size
+    ext = os.path.basename(file_path).split('.')[-1]
 
-    headers['Date'] = 'Sun, 18 Oct 2012 10:36:20 GMT'
-    headers['Server'] = 'Apache/2.2.14 (Win32)'
-
-    response = http.HttpResponse(code, headers)
+    response = http.HttpResponse(code, headers, file_type=ext)
     return response
 
 
