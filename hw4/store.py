@@ -2,6 +2,7 @@ import redis
 import time
 import json
 from collections import namedtuple
+from functools import wraps
 from datetime import datetime, timedelta
 
 
@@ -15,6 +16,21 @@ class StoreConnectionError(Exception):
     pass
 
 
+def reconnector(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        attempts = 1 + self.reconnect_attempts
+        while attempts:
+            attempts -= 1
+            try:
+                return func(self, *args, **kwargs)
+            except (redis.ConnectionError, redis.TimeoutError):
+                if attempts and self.reconnect_delay:
+                    time.sleep(self.reconnect_delay)
+        raise StoreConnectionError()
+    return wrapper
+
+
 class StoreConnection:
 
     def __init__(self, db_index=0, host='localhost', port=6379,
@@ -25,18 +41,20 @@ class StoreConnection:
                                       socket_connect_timeout=socket_timeout,
                                       socket_timeout=socket_timeout)
 
-        self._reconnect_attempts = reconnect_attempts or 0
-        self._reconnect_delay = reconnect_delay
+        self.reconnect_attempts = reconnect_attempts or 0
+        self.reconnect_delay = reconnect_delay
 
+    @reconnector
     def get(self, key):
-        value = self._reconnect_wrapper(self.conn.get, [key])
+        value = self.conn.get(key)
         return self._decode(value)
 
+    @reconnector
     def set(self, key, value, expire_time=None):
         value = self._encode(value)
-        self._reconnect_wrapper(self.conn.set, [key, value])
-        if expire_time:
-            self._reconnect_wrapper(self.conn.expire, [key, expire_time])
+        self.conn.set(key, value)
+        if expire_time is not None:
+            self.conn.expire(key, expire_time)
 
     def flush(self):
         self.conn.flushdb()
@@ -50,18 +68,6 @@ class StoreConnection:
         if value is None:
             return None
         return json.loads(value.decode('utf-8'))
-
-    def _reconnect_wrapper(self, func, args):
-        attempts = 1 + self._reconnect_attempts
-        while attempts:
-            attempts -= 1
-            try:
-                return func(*args)
-            except (redis.ConnectionError, redis.TimeoutError):
-                if attempts and self._reconnect_delay:
-                    time.sleep(self._reconnect_delay)
-
-        raise StoreConnectionError()
 
 
 class Store:
