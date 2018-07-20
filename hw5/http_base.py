@@ -2,26 +2,30 @@ import os
 import datetime
 import urllib.parse
 
-import const
-
-
 HTTP_VERSION = 'HTTP/1.1'
+STATUS_OK = 200
+STATUS_FORBIDDEN = 403
+STATUS_NOT_FOUND = 404
+STATUS_UNKNOWN_METHOD = 405
+
+STATUS_MAP = {
+    STATUS_OK: 'OK',
+    STATUS_FORBIDDEN: 'Forbidden',
+    STATUS_NOT_FOUND: 'Not Found',
+    STATUS_UNKNOWN_METHOD: 'Unknown Method'
+}
 
 
 class HttpRequestError(Exception):
     pass
 
 
-class UnsupportedHttpVersion(HttpRequestError):
-    pass
-
-
 class HttpResponse:
 
     content_map = {
-        'html': 'text/html; charset=utf-8',
-        'css': 'text/css; charset=utf-8',
-        'js': 'application/javascript; charser=utf-8',
+        'html': 'text/html',
+        'css': 'text/css',
+        'js': 'application/javascript',
         'jpeg': 'image/jpeg',
         'jpg': 'image/jpeg',
         'png': 'image/png',
@@ -36,7 +40,7 @@ class HttpResponse:
         self.file_type = file_type
 
     def to_bytes(self):
-        head = '{} {} {}'.format(HTTP_VERSION, self.code, const.STATUS_MAP[self.code])
+        head = '{} {} {}'.format(HTTP_VERSION, self.code, STATUS_MAP[self.code])
 
         body = None
         if self.body:
@@ -70,8 +74,8 @@ class HttpRequest:
     @staticmethod
     def from_raw_data(request_line, headers, body):
         method, route, version = request_line.split(' ')
-        if version != HTTP_VERSION:
-            raise UnsupportedHttpVersion()
+        if not version.startswith('HTTP/'):
+            raise HttpRequestError("Invalid http version")
 
         args = None
         if '?' in route:
@@ -81,13 +85,12 @@ class HttpRequest:
             route += 'index.html'
 
         route = urllib.parse.unquote(route)
-
         return HttpRequest(method, route, version, args, headers, body)
 
 
 def handle_get_request(root_dir, request) -> HttpResponse:
     response = handle_head_request(root_dir, request)
-    if response.code != const.STATUS_OK:
+    if response.code != STATUS_OK:
         return response
 
     file_path = root_dir + request.route
@@ -101,15 +104,15 @@ def handle_head_request(root_dir, request) -> HttpResponse:
     file_path = os.path.normpath(root_dir + request.route)
 
     if not file_path.startswith(root_dir):
-        code = const.STATUS_FORBIDDEN
+        code = STATUS_FORBIDDEN
     elif not os.path.exists(file_path):
-        code = const.STATUS_NOT_FOUND
+        code = STATUS_NOT_FOUND
     elif not os.access(file_path, os.R_OK):
-        code = const.STATUS_FORBIDDEN
+        code = STATUS_FORBIDDEN
     else:
-        code = const.STATUS_OK
+        code = STATUS_OK
 
-    if code != const.STATUS_OK:
+    if code != STATUS_OK:
         return HttpResponse(code, {})
 
     date = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S UTC")
@@ -126,7 +129,7 @@ def handle_head_request(root_dir, request) -> HttpResponse:
 
 
 def handle_unknown_request(*args, **kwargs):
-    response = HttpResponse(const.STATUS_UNKNOWN_METHOD, {})
+    response = HttpResponse(STATUS_UNKNOWN_METHOD, {})
     return response
 
 

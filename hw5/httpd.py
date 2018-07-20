@@ -6,10 +6,9 @@ import json
 import threading
 import queue
 
-import const
 import http_base as http
 
-PACKAGE_SIZE = 1024
+PACKAGE_SIZE = 512
 
 
 class ClientWorker:
@@ -26,16 +25,16 @@ class ClientWorker:
         logging.info("worker started")
         while True:
             client_socket, client_addr = self.queue.get()
-            logging.info("Start handling client: %s", client_addr)
+            self.addr = client_addr
+            logging.info("Start handling client: %s", self.addr)
             self.socket = client_socket
             self.buffer.clear()
             try:
                 self._handle_request()
             except Exception as ex:
-                logging.error("Something went wrong on: %s", client_addr)
+                logging.error("Something went wrong on: %s", self.addr)
                 logging.exception(ex)
             client_socket.close()
-                # close socket
 
     def _handle_request(self):
         handler_map = {
@@ -43,7 +42,6 @@ class ClientWorker:
             'HEAD': http.handle_head_request,
         }
 
-        # TODO: сделать возможность приема нескольких запросов
         request = self._receive_request()
 
         logging.info("Request: %s %s from %s", request.method, request.route, self.addr)
