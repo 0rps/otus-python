@@ -97,6 +97,7 @@ def main(config):
 
     for _ in range(workers_count):
         worker = threading.Thread(target=ClientWorker(root_dir, common_queue))
+        worker.daemon = True
         workers.append(worker)
         worker.start()
 
