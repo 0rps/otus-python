@@ -12,6 +12,7 @@ def cases(cases):
                 new_args = args + (c if isinstance(c, tuple) else (c,))
                 try:
                     f(*new_args)
+                # TODO: ловить только ошибки от unittest
                 except Exception as ex:
                     args_string = ', '.join(str(x) for x in new_args[1:])
                     raise Exception('Error in : {}({})'.format(f.__name__, args_string)) from ex

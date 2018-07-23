@@ -59,8 +59,10 @@ class ClientWorker:
         while not request:
             chunk = self.socket.recv(PACKAGE_SIZE)
             if chunk == b'':
+                # TODO: просто клиент закрыл соединение, это "нормальная" ситуация, а не ошибка
                 raise RuntimeError("Socket connection broken")
             self.buffer.add_data(chunk)
+            # TODO: а если никогда не пришлют окончание запроса ? надо задаться какой-то максимально вменяемой длиной и обрывать чтение после
             request = self.buffer.pop_request()
         return request
 

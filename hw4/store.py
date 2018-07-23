@@ -102,6 +102,7 @@ class Store:
         except StoreConnectionError:
             self._is_flush_cache = True
 
+    # TODO: убрать очистку
     def _flush_cache(self):
         if not self._is_flush_cache:
             return

@@ -22,6 +22,7 @@ class HttpRequestError(Exception):
 
 class HttpResponse:
 
+    # TODO: использовать модуль mimetypes
     content_map = {
         'html': 'text/html',
         'css': 'text/css',
@@ -71,9 +72,11 @@ class HttpRequest:
         self.headers = headers
         self.body = body
 
+    # TODO: это должен быть classmethod, их используют для создания алтернативных конструкторов.
     @staticmethod
     def from_raw_data(request_line, headers, body):
         method, route, version = request_line.split(' ')
+        # TODO: отдавать 400
         if not version.startswith('HTTP/'):
             raise HttpRequestError("Invalid http version")
 
@@ -101,6 +104,7 @@ def handle_get_request(root_dir, request) -> HttpResponse:
 
 def handle_head_request(root_dir, request) -> HttpResponse:
 
+    # TODO: пути на фс через + конкатинировать не особо хорошо
     file_path = os.path.normpath(root_dir + request.route)
 
     if not file_path.startswith(root_dir):
@@ -142,12 +146,14 @@ class HttpRequestBuffer:
         self.data.extend(bytes_data)
 
     def pop_request(self):
+
         if b'\r\n\r\n' in self.data:
             return self._parse_request()
 
     def clear(self):
         self.data = bytearray()
 
+    # TODO:  а если плохо запрос прислали? надо отлавливать и 400 возвращать
     def _parse_request(self):
         data = self.data.decode()
         head, body = data.split('\r\n\r\n')[:2]
