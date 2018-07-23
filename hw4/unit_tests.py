@@ -577,9 +577,7 @@ class StoreTestSuite(unittest.TestCase):
             redis_set.side_effect = redis.ConnectionError
             self.store.cache_set('key_1', '11', 60)
 
-        # test that db flushed
-        self.assertEqual(self.store.cache_get('key_1'), None)
-        self.assertEqual(self.store.cache_get('key_2'), None)
+        self.assertEqual(self.store.cache_get('key_1'), '1')
 
 
 if __name__ == "__main__":

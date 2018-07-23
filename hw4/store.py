@@ -89,7 +89,6 @@ class Store:
 
     def cache_get(self, key):
         try:
-            self._flush_cache()
             value = self.cache.get(key)
             return value
         except StoreConnectionError:
@@ -97,15 +96,6 @@ class Store:
 
     def cache_set(self, key, value, expiration_time):
         try:
-            self._flush_cache()
             self.cache.set(key, value, expiration_time)
         except StoreConnectionError:
-            self._is_flush_cache = True
-
-    # TODO: убрать очистку
-    def _flush_cache(self):
-        if not self._is_flush_cache:
-            return
-
-        self.cache.flush()
-        self._is_flush_cache = False
+            pass
