@@ -77,9 +77,8 @@ class HttpRequest:
         self.headers = headers
         self.body = body
 
-    # TODO: это должен быть classmethod, их используют для создания алтернативных конструкторов.
-    @staticmethod
-    def from_raw_data(request_line, headers, body):
+    @classmethod
+    def from_raw_data(cls, request_line, headers, body):
         try:
             method, route, version = request_line.split(' ')
         except ValueError:
@@ -96,7 +95,7 @@ class HttpRequest:
             route += 'index.html'
 
         route = urllib.parse.unquote(route)
-        return HttpRequest(method, route, version, args, headers, body)
+        return cls(method, route, version, args, headers, body)
 
 
 def handle_get_request(root_dir, request) -> HttpResponse:
