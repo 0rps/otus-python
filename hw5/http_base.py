@@ -4,16 +4,21 @@ import urllib.parse
 
 HTTP_VERSION = 'HTTP/1.1'
 STATUS_OK = 200
+STATUS_INVALID = 400
 STATUS_FORBIDDEN = 403
 STATUS_NOT_FOUND = 404
 STATUS_UNKNOWN_METHOD = 405
 
 STATUS_MAP = {
     STATUS_OK: 'OK',
+    STATUS_INVALID: 'Invalid Request',
     STATUS_FORBIDDEN: 'Forbidden',
     STATUS_NOT_FOUND: 'Not Found',
     STATUS_UNKNOWN_METHOD: 'Unknown Method'
 }
+
+
+MAX_REQUEST_LENGTH = 3072
 
 
 class HttpRequestError(Exception):
@@ -34,7 +39,7 @@ class HttpResponse:
         'swf': 'application/x-shockwave-flash'
     }
 
-    def __init__(self, code, headers, file_type=None, body=None):
+    def __init__(self, code, headers=None, file_type=None, body=None):
         self.code = code
         self.headers = headers or {}
         self.body = body
@@ -75,8 +80,11 @@ class HttpRequest:
     # TODO: это должен быть classmethod, их используют для создания алтернативных конструкторов.
     @staticmethod
     def from_raw_data(request_line, headers, body):
-        method, route, version = request_line.split(' ')
-        # TODO: отдавать 400
+        try:
+            method, route, version = request_line.split(' ')
+        except ValueError:
+            raise HttpRequestError('Invalid format of request line: "{}"'.format(request_line))
+
         if not version.startswith('HTTP/'):
             raise HttpRequestError("Invalid http version")
 
@@ -150,29 +158,44 @@ class HttpRequestBuffer:
         if b'\r\n\r\n' in self.data:
             return self._parse_request()
 
+        if len(self.data) > MAX_REQUEST_LENGTH:
+            raise HttpRequestError("Length of request is exceeded")
+
     def clear(self):
         self.data = bytearray()
 
-    # TODO:  а если плохо запрос прислали? надо отлавливать и 400 возвращать
     def _parse_request(self):
-        data = self.data.decode()
-        head, body = data.split('\r\n\r\n')[:2]
+        head, body = self.data.split(b'\r\n\r\n')[:2]
+
+        try:
+            head = head.decode()
+        except UnicodeDecodeError:
+            raise HttpRequestError('Wrong head encoding')
 
         head_lines = head.split('\r\n')
-
         request_line = head_lines[0]
         headers = {}
         for line in head_lines[1:]:
             index = line.find(':')
+            if index < 1:
+                raise HttpRequestError('Wrong header: "{}"'.format(line))
             key, value = line[:index], line[index+1:]
             headers[key] = value.strip()
 
         if 'Content-Length' not in headers:
             return HttpRequest.from_raw_data(request_line, headers, None)
 
-        length = int(headers['Content-Length'])
+        try:
+            length = int(headers['Content-Length'])
+        except ValueError:
+            raise HttpRequestError('Wrong format of Content-Length value: "{}"'.format(headers['Content-Length']))
+
         if len(body) > length:
             body = body[:length]
+            try:
+                body = body.decode()
+            except UnicodeDecodeError:
+                raise HttpRequestError('Wrong body encoding')
             request_length = len(head) + length + 4
             self.data = self.data[request_length:]
         elif len(body) < length:

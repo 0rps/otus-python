@@ -22,7 +22,7 @@ class ClientWorker:
         self.queue = common_queue
 
     def __call__(self, *args, **kwargs):
-        logging.info("worker started")
+        logging.info("Worker started")
         while True:
             client_socket, client_addr = self.queue.get()
             self.addr = client_addr
@@ -42,7 +42,19 @@ class ClientWorker:
             'HEAD': http.handle_head_request,
         }
 
-        request = self._receive_request()
+        try:
+            request = self._receive_request()
+        except http.HttpRequestError as ex:
+            logging.exception(ex)
+
+            response = http.HttpResponse(code=http.STATUS_INVALID)
+            self._send_response(response)
+            self.socket.shutdown(socket.SHUT_RDWR)
+            return
+
+        if not request:
+            logging.info("Client % closed connection", self.addr)
+            return
 
         logging.info("Request: %s %s from %s", request.method, request.route, self.addr)
 
@@ -59,10 +71,8 @@ class ClientWorker:
         while not request:
             chunk = self.socket.recv(PACKAGE_SIZE)
             if chunk == b'':
-                # TODO: просто клиент закрыл соединение, это "нормальная" ситуация, а не ошибка
-                raise RuntimeError("Socket connection broken")
+                return None
             self.buffer.add_data(chunk)
-            # TODO: а если никогда не пришлют окончание запроса ? надо задаться какой-то максимально вменяемой длиной и обрывать чтение после
             request = self.buffer.pop_request()
         return request
 
