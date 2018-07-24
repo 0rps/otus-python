@@ -1,6 +1,7 @@
 import os
 import datetime
 import urllib.parse
+import mimetypes
 
 HTTP_VERSION = 'HTTP/1.1'
 STATUS_OK = 200
@@ -39,11 +40,11 @@ class HttpResponse:
         'swf': 'application/x-shockwave-flash'
     }
 
-    def __init__(self, code, headers=None, file_type=None, body=None):
+    def __init__(self, code, headers=None, mimetype=None, body=None):
         self.code = code
         self.headers = headers or {}
         self.body = body
-        self.file_type = file_type
+        self.mimetype = mimetype
 
     def to_bytes(self):
         head = '{} {} {}'.format(HTTP_VERSION, self.code, STATUS_MAP[self.code])
@@ -51,11 +52,10 @@ class HttpResponse:
         body = None
         if self.body:
             body = self.body.encode('utf-8') if isinstance(self.body, str) else self.body
-            mime_type = self.content_map.get(self.file_type) or 'application/octet-stream'
             body_length = len(body)
 
             self.headers['Content-Length'] = body_length
-            self.headers['Content-Type'] = mime_type
+            self.headers['Content-Type'] = self.mimetype
 
         headers = ['{}: {}'.format(k, v) for k, v in self.headers.items()]
 
@@ -111,9 +111,8 @@ def handle_get_request(root_dir, request) -> HttpResponse:
 
 
 def handle_head_request(root_dir, request) -> HttpResponse:
-
-    # TODO: пути на фс через + конкатинировать не особо хорошо
-    file_path = os.path.normpath(root_dir + request.route)
+    route = request.route.lstrip('/')
+    file_path = os.path.normpath(os.path.join(root_dir, route))
 
     if not file_path.startswith(root_dir):
         code = STATUS_FORBIDDEN
@@ -134,9 +133,8 @@ def handle_head_request(root_dir, request) -> HttpResponse:
         'Server': 'MiniServerForOtus v0.1',
         'Content-Length': os.stat(file_path).st_size
     }
-    ext = os.path.basename(file_path).split('.')[-1]
-
-    response = HttpResponse(code, headers, file_type=ext)
+    mimetype, _ = mimetypes.guess_type(file_path)
+    response = HttpResponse(code, headers, mimetype=mimetype)
     return response
 
 
