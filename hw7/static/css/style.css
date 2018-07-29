@@ -1,10 +1,29 @@
 
-.flex-column {
-    display: flex;
-    flex-direction: column;
-}
+/*.main-container {*/
+    /*display: flex;*/
+    /*flex-direction: column;*/
+    /*height: 100%;*/
+    /*width: 100%;*/
+    /*align-items: stretch;*/
+/*}*/
 
-.flex-row {
-    display: flex;
-    flex-direction: row;
+/*.flex-column {*/
+    /*display: flex;*/
+    /*flex-direction: column;*/
+/*}*/
+
+/*.flex-row {*/
+    /*display: flex;*/
+    /*flex-direction: row;*/
+/*}*/
+
+.rate-block {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    color: white;
+    background-color: dodgerblue;
+    text-align: center;
+    vertical-align: middle;
+
 }
