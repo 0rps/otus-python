@@ -23,18 +23,31 @@
                 <div class="col-sm" style="max-width: 300px">
                     <input class="form-control mr-sm-2" type="text" placeholder="Search" aria-label="Search">
                 </div>
-                {% if user %}
+                {% if user1 %}
                     <div style="max-width: 200px" class="col-sm">
                         <a href="#">0rps</a>
                         <div class="w-100"></div>
                         <button type="button" class="btn btn-default btn-lg">
-                            <span class="oi oi-account-logout" aria-hidden="true"></span>
+                            <span class="oi oi-account-logout" aria-hidden="true">asdf</span>
                         </button>
                     </div>
                 {% else %}
                     <div style="max-width: 200px" class="col-sm">
-                        <button class="my-2 my-sm-0" >0rps</button>
-                        <button class="btn my-2 my-sm-0" >Sign up</button>
+                        <div class="row">
+                            <div class="col-sm pr-0">
+                                <div style="width:80px; height: 80px; background-color: black" ></div>
+                            </div>
+
+                            <div class="col-sm">
+                                <a href="#">0rps</a>
+                                <div class="w-100"></div>
+                                <button type="button" class="btn btn-default btn-md">
+                                    <span class="oi oi-account-logout" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        </div>
+
+
                     </div>
                 {% endif %}
 
@@ -55,7 +68,7 @@
             </div>
             <div class="col" style="max-width: 300px; min-width: 300px">
 
-                {% if not hide_ask_button and user %}
+                {% if not hide_ask_button and user1 %}
                 <div class="row justify-content-start">
                     <button class="btn mr-auto" style="min-width: 100px" >Ask!</button>
                 </div>
