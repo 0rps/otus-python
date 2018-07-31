@@ -21,5 +21,7 @@ from qa import views as qa_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', qa_views.index)
+    path('', qa_views.index),
+    path('signup/', qa_views.signup),
+    path('login/', qa_views.login)
 ]

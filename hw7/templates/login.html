@@ -4,9 +4,15 @@
 
 {% block page_content %}
 
-    <form action="/signup/" method="post">
+    {% if auth_failed %}
+        <div class="alert alert-danger" role="alert">
+            Неверный логин или пароль!
+        </div>
+    {% endif %}
+
+    <form action="/login/" method="post">
         {% csrf_token %}
-        {% for field in signup_form %}
+        {% for field in login_form %}
         <div class="form-group">
             {% for errmsg in field.errors %}
                 <div class="alert alert-danger" role="alert">
@@ -17,7 +23,7 @@
         </div>
     {% endfor %}
 
-      <button type="submit" class="btn btn-primary">Sign up</button>
+      <button type="submit" class="btn btn-primary">Login</button>
     </form>
 
 {% endblock %}
