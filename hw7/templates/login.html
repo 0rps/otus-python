@@ -10,9 +10,9 @@
         </div>
     {% endif %}
 
-    <form action="/login/" method="post">
+    <form action="/users/login/" method="post">
         {% csrf_token %}
-        {% for field in login_form %}
+        {% for field in main_form %}
         <div class="form-group">
             {% for errmsg in field.errors %}
                 <div class="alert alert-danger" role="alert">

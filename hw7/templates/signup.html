@@ -4,9 +4,9 @@
 
 {% block page_content %}
 
-    <form action="/signup/" method="post">
+    <form action="/users/signup/" method="post">
         {% csrf_token %}
-        {% for field in signup_form %}
+        {% for field in main_form %}
         <div class="form-group">
             {% for errmsg in field.errors %}
                 <div class="alert alert-danger" role="alert">
