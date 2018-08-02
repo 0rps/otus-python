@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from django.contrib.auth import authenticate, login, logout
 
 from . import forms as user_forms
 from . import models as user_models
@@ -22,28 +23,26 @@ def signup_view(request):
 
 @require_http_methods(['GET', 'POST'])
 def login_view(request):
-    login_failed = False
     if request.method == 'GET':
         form = user_forms.LoginForm()
     else:
         form = user_forms.LoginForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            user = user_models.User.authenticate_user(**data)
+            user = authenticate(request, **data)
             if user is not None:
-                if hasattr(request, 'user'):
-                    request.user = user
+                login(request, user)
                 return HttpResponseRedirect('/')
-            else:
-                login_failed = True
 
-    return render(request, 'login.html', {'main_form': form,
-                                          'login_failed': login_failed})
+    return render(request, 'login.html', {'main_form': form})
 
 
 @require_POST
 def logout_view(request):
-    pass
+    if request.user.is_authenticated:
+        logout(request)
+
+    return HttpResponseRedirect('/')
 
 
 @require_GET
