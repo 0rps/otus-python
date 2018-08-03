@@ -5,4 +5,4 @@ from django.http.response import HttpResponseRedirect
 
 @require_GET
 def index(request):
-    return render(request, 'index.html')
+    return render(request, 'qa/index.html')

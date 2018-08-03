@@ -4,8 +4,9 @@ from . import views
 
 
 urlpatterns = [
-    path('login/', views.login_view),
-    path('signup/', views.signup_view),
-    path('logout/', views.logout_view),
-    re_path(r'^profile/(?P<id>\d+)/$', views.profile_view)
+    path('login/', views.login_view, name='login'),
+    path('signup/', views.signup_view, name='signup'),
+    path('logout/', views.logout_view, name='logout'),
+    path('<int:user_id>/profile/', views.profile_view, name='profile'),
+    path('<int:user_id>/avatar/', views.avatar_view, name='avatar')
 ]

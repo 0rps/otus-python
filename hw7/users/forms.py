@@ -47,12 +47,20 @@ class SignupForm(forms.Form):
 
 class LoginForm(forms.Form):
 
-    username = forms.CharField(label='Login',
-                               min_length=4,
-                               max_length=32,
-                               widget=forms.TextInput(attrs={'class': 'form-control',
-                                                             'placeholder': 'Login or email'}))
+    login = forms.CharField(label='Login',
+                            min_length=4,
+                            max_length=32,
+                            widget=forms.TextInput(attrs={'class': 'form-control',
+                                                          'placeholder': 'Login or email'}))
     password = forms.CharField(label='Password',
                                min_length=6,
                                widget=forms.PasswordInput(attrs={'class': 'form-control',
                                                                  'placeholder': 'Password'}))
+
+
+class ProfileForm(forms.Form):
+
+    email = forms.EmailField(label='Email',
+                             widget=forms.EmailInput(attrs={'class': 'form-control',
+                                                            'placeholder': 'Email'}))
+    avatar = forms.ImageField(label='Avatar image', required=False)

@@ -4,15 +4,13 @@ from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import AbstractBaseUser
 
-from . import models as user_models
-
 
 class User(AbstractBaseUser):
 
     USERNAME_FIELD = 'login'
 
     avatar = models.ImageField(null=True)
-    login = models.CharField(max_length=32, null=False)
+    login = models.CharField(max_length=32, null=False, unique=True)
     email = models.EmailField(null=False)
     password = models.CharField(max_length=256, null=False)
     register_date = models.DateTimeField(null=False)

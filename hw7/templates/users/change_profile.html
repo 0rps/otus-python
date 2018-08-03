@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %} Profile {% endblock %}
+
+{% block page_content %}
+
+    <div class="row">
+        <div class="col-sm">Login</div>
+        <div class="col-sm">{{user.login}}</div>
+    </div>
+
+    <form action="/users/{{user.id}}/profile/" method="post">
+        {% csrf_token %}
+        {% for field in main_form %}
+        <div class="form-group">
+            {% for errmsg in field.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ errmsg }}
+                </div>
+            {% endfor %}
+            {{ field }}
+        </div>
+    {% endfor %}
+
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+
+{% endblock %}
