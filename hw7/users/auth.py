@@ -4,8 +4,7 @@ from . import models
 
 class SimpleAuthBackend:
     def authenticate(self, request, username=None, password=None):
-        users = models.User.objects.filter((Q(login__exact=username)
-                                            | Q(email__exact=username))
+        users = models.User.objects.filter(Q(login__exact=username)
                                            & Q(password__exact=password))
         return users[0] if len(users) > 0 else None
 

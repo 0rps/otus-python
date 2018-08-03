@@ -27,8 +27,11 @@
                     <div style="max-width: 200px" class="col-sm">
                         <div class="row">
                             <div class="col-sm pr-0">
-
+                                {% if user.avatar %}
+                                    <img src="/users/{{user.id}}/avatar" width="80px" height="80px" alt="альтернативный текст" />
+                                {% else %}
                                 <img src="/static/img/account.png" width="80px" height="80px" alt="альтернативный текст" />
+                                {% endif %}
                             </div>
 
                             <div class="col-sm">

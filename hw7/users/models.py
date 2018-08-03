@@ -20,3 +20,11 @@ class User(AbstractBaseUser):
         user = cls(register_date=datetime.datetime.utcnow(), **cleaned_data)
         user.save()
 
+    def update_email_avatar(self, email, avatar):
+        if avatar is not None:
+            self.avatar = avatar
+
+        if self.email != email:
+            self.email = email
+
+        self.save()
