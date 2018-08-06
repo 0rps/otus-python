@@ -17,7 +17,12 @@
     /*flex-direction: row;*/
 /*}*/
 
-.rate-block {
+.trend-question-block {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.trend-rating {
     width: 40px;
     height: 40px;
     line-height: 40px;
