@@ -59,6 +59,9 @@ class Answer(models.Model):
         answer.body = body
         answer.save()
 
+        question.answers_count += 1
+        question.save()
+
         return answer
 
 
