@@ -9,7 +9,7 @@
         <div class="col-sm">{{user.login}}</div>
     </div>
 
-    <form action="/users/{{user.id}}/profile/" method="post">
+    <form action="{% url 'profile' user.id %}" method="post">
         {% csrf_token %}
         {% for field in main_form %}
         <div class="form-group">
@@ -20,9 +20,8 @@
             {% endfor %}
             {{ field }}
         </div>
-    {% endfor %}
-
-      <button type="submit" class="btn btn-primary">Save</button>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Save</button>
     </form>
 
 {% endblock %}

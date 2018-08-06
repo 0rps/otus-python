@@ -20,9 +20,11 @@ class Question(models.Model):
     @classmethod
     def create(cls, user, title, body, tags):
         q = cls()
-        q.user = user
+        q.author = user
         q.title = title
         q.body = body
+
+        q.save()
 
         for tag_text in tags:
             tag_text = tag_text.lower()
@@ -37,6 +39,9 @@ class Question(models.Model):
         q.save()
         return q
 
+    def get_answers(self):
+        return Answer.objects.filter(question__id=self.id)
+
 
 class Answer(models.Model):
     body = models.TextField()
@@ -49,7 +54,7 @@ class Answer(models.Model):
     @classmethod
     def create(cls, user, question, body):
         answer = cls()
-        answer.user = user
+        answer.author = user
         answer.question = question
         answer.body = body
         answer.save()

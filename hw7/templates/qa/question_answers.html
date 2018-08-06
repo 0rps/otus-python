@@ -5,13 +5,60 @@
 
 {% block page_content %}
 
-QUESTION HERE!!!! <br>
+<div class="row">
 
+    <div class="row">
+        <h2>{{question.title}}</h2>
+    </div>
+    <div class="row">
+        {{question.body}}
+    </div>
+
+</div>
 
 {% for answer in answers %}
 
-
+    <div class="row">
+        {{ answer.body }}
+    </div>
 
 {% endfor %}
+
+<div class="pagination">
+    <span class="step-links">
+        {% if answers.has_previous %}
+            <a href="{% url 'question' question.id %}?page=1"></a>
+            <a href="{% url 'question' question.id %}?page={{ answers.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ answers.number }} of {{ answers.paginator.num_pages }}.
+        </span>
+
+        {% if answers.has_next %}
+            <a href="{% url 'question' question.id %}?page={{ answers.next_page_number }}">next</a>
+            <a href="{% url 'question' question.id %}?page={{ answers.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+
+<div>
+        <form action="{% url 'question' question.id %}" method="post">
+        {% csrf_token %}
+        {% for field in main_form %}
+        <div class="form-group">
+            {% for errmsg in field.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ errmsg }}
+                </div>
+            {% endfor %}
+            {{ field }}
+        </div>
+    {% endfor %}
+
+      <button type="submit" class="btn btn-primary">Answer</button>
+    </form>
+</div>
+
 
 {% endblock %}
