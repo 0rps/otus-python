@@ -30,7 +30,7 @@ def ask_question(request):
                                               data['title'],
                                               data['body'],
                                               data['tags'])
-            return HttpResponseRedirect(reverse('answers',
+            return HttpResponseRedirect(reverse('question',
                                                 kwargs={'question_id': question.id}))
     context['main_form'] = form
     return render(request, 'qa/ask_question.html', context)
