@@ -75,7 +75,7 @@ def profile_view(request, user_id):
             request.user.update_email_avatar(**data)
             form = user_forms.ProfileForm(request.POST)
 
-    return render(request, 'users/change_profile.html', {'main_form': form})
+    return render(request, 'users/profile.html', {'main_form': form})
 
 
 @require_GET
