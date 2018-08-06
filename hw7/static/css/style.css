@@ -25,5 +25,24 @@
     background-color: dodgerblue;
     text-align: center;
     vertical-align: middle;
+}
 
+
+.question-bottom {
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+
+.tag-block {
+    background-color: #4d99da;
+    padding: 10px 20px;
+    margin-left: 10px;
+    margin-right:10px
+}
+
+.answer-divider {
+    border-bottom: 1px solid gray;
+    margin-top: 5px;
+    margin-bottom: 40px;
 }

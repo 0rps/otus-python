@@ -5,45 +5,104 @@
 
 {% block page_content %}
 
-<div class="row">
+<div class="container-fluid">
 
     <div class="row">
         <h2>{{question.title}}</h2>
     </div>
     <div class="row">
-        {{question.body}}
-    </div>
+        <div class="col-sm px-0" style="max-width: 70px" >
+                <div class="container-fluid">
+                    <div class="row "> <span class="oi oi-chevron-top mx-auto" aria-hidden="true"></span> </div>
+                    <div class="row "> <h2 class="my-0 mx-auto"> {{question.rating}} </h2> </div>
+                    <div class="row  "> <span class="oi oi-chevron-bottom mx-auto" aria-hidden="true"></span> </div>
+                </div>
+        </div>
 
+        <div class="col-sm">
+            {{question.body}}
+        </div>
+    </div>
+    <div class="row question-bottom">
+        {% for tag in question.tags.all %}
+            <div class="tag-block">{{tag.name}}</div>
+        {% endfor%}
+
+        <div class="col-sm"> </div>
+        <div>
+            <img src="/static/img/account.png" width="40px" height="40px" alt="Profile img"/>
+        </div>
+        <div class="align-self-start" style="display: table" > {{user.login}}</div>
+        <div class="col-sm" style="max-width: 60px"> </div>
+    </div>
+    <div class="row answer-divider"></div>
 </div>
 
 {% for answer in answers %}
-
+<div class="container-fluid">
     <div class="row">
-        {{ answer.body }}
-    </div>
+        <div class="col-sm px-0" style="max-width: 70px" >
+                <div class="container-fluid">
+                    <div class="row "> <span class="oi oi-chevron-top mx-auto" aria-hidden="true"></span> </div>
+                    <div class="row "> <h2 class="my-0 mx-auto"> {{answer.rating}} </h2> </div>
+                    <div class="row "> <span class="oi oi-chevron-bottom mx-auto" aria-hidden="true"></span> </div>
+                </div>
+        </div>
 
+        <div class="col-sm">
+            {{answer.body}}
+        </div>
+    </div>
+    <div class="row question-bottom">
+        <div class="col-sm"> </div>
+        <div>
+            <img src="/static/img/account.png" width="40px" height="40px" alt="Profile img"/>
+        </div>
+        <div class="align-self-start" style="display: table" > {{answer.author.login}}</div>
+        <div class="col-sm" style="max-width: 60px"> </div>
+    </div>
+    <div class="row answer-divider"></div>
+</div>
 {% endfor %}
 
-<div class="pagination">
-    <span class="step-links">
-        {% if answers.has_previous %}
-            <a href="{% url 'question' question.id %}?page=1"></a>
-            <a href="{% url 'question' question.id %}?page={{ answers.previous_page_number }}">previous</a>
-        {% endif %}
+<div class="container-fluid">
 
-        <span class="current">
-            Page {{ answers.number }} of {{ answers.paginator.num_pages }}.
-        </span>
+    <div class="row">
+        <div class="col-sm"></div>
+        <nav aria-label="Page navigation example">
+          <ul class="pagination">
 
-        {% if answers.has_next %}
-            <a href="{% url 'question' question.id %}?page={{ answers.next_page_number }}">next</a>
-            <a href="{% url 'question' question.id %}?page={{ answers.paginator.num_pages }}">last &raquo;</a>
-        {% endif %}
-    </span>
+              {% if answers.has_previous %}
+              <li class="page-item">
+                  <a class="page-link" href="{% url 'question' question.id %}?page=1" aria-label="First">
+                      <span aria-hidden="true">&laquo;</span>
+                      <span class="sr-only">First</span>
+                  </a>
+              </li>
+              <li class="page-item"><a class="page-link" href="{% url 'question' question.id %}?page={{ answers.previous_page_number }}">{{ answers.previous_page_number }}</a></li>
+              {% endif %}
+
+              <li class="page-item active">
+                    <a class="page-link" href="#">{{answers.number}}<span class="sr-only">{{answers.number}}</span></a>
+              </li>
+
+              {% if answers.has_next %}
+              <li class="page-item"><a class="page-link" href="{% url 'question' question.id %}?page={{ answers.next_page_number }}">{{ answers.next_page_number }}</a></li>
+              <li class="page-item">
+                  <a class="page-link" href="{% url 'question' question.id %}?page={{answers.paginator.num_pages}}" aria-label="Last">
+                      <span aria-hidden="true">&raquo;</span>
+                      <span class="sr-only">Last</span>
+                  </a>
+              </li>
+              {% endif %}
+          </ul>
+        </nav>
+        <div class="col-sm"></div>
+    </div>
 </div>
 
 <div>
-        <form action="{% url 'question' question.id %}" method="post">
+    <form action="{% url 'question' question.id %}" method="post">
         {% csrf_token %}
         {% for field in main_form %}
         <div class="form-group">
@@ -54,7 +113,7 @@
             {% endfor %}
             {{ field }}
         </div>
-    {% endfor %}
+        {% endfor %}
 
       <button type="submit" class="btn btn-primary">Answer</button>
     </form>
