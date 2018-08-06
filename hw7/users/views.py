@@ -59,27 +59,23 @@ def logout_view(request):
 @require_http_methods(['POST', 'GET'])
 @login_required(login_url=reverse_lazy('login'))
 def profile_view(request, user_id):
-    if user_id == request.user.id:
-        if request.method == 'GET':
-            form = user_forms.ProfileForm()
-        else:
+    if user_id != request.user.id:
+        return HttpResponseForbidden()
+
+    if request.method == 'GET':
+        form = user_forms.ProfileForm()
+    else:
+        form = user_forms.ProfileForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            if 'avatar' in request.FILES:
+                data['avatar'] = request.FILES['avatar']
+            else:
+                data['avatar'] = None
+            request.user.update_email_avatar(**data)
             form = user_forms.ProfileForm(request.POST)
-            if form.is_valid():
-                data = form.cleaned_data
-                if 'avatar' in request.FILES:
-                    data['avatar'] = request.FILES['avatar']
-                else:
-                    data['avatar'] = None
-                request.user.update_email_avatar(**data)
-                form = user_forms.ProfileForm(request.POST)
 
-        return render(request, 'users/change_profile.html', {'main_form': form})
-
-    elif request.method == 'GET':
-        another_user = get_object_or_404(user_models.User, pk=user_id)
-        return render(request, 'users/profile.html', {'profile_user': another_user})
-
-    return HttpResponseForbidden()
+    return render(request, 'users/change_profile.html', {'main_form': form})
 
 
 @require_GET
