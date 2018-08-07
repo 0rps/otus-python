@@ -5,8 +5,70 @@
 
 {% block page_content %}
 
+<div class="row">
+
+    <div class="col-sm"><h2 class="text-center">
+        {% if sort == 'date' %}
+        <span class="index-header">New questions</span>
+        {% else %}
+        <a class="index-header" href="/?sort=date">New questions</a>
+        {% endif %}
+    </h2></div>
+
+    <div style="border-left:1px solid gray; width:1px"></div>
+
+    <div class="col-sm"><h2 class="text-center">
+        {% if sort == 'rating' %}
+        <span class="index-header">Not questions</span>
+        {% else %}
+        <a class="index-header" href="/?sort=rating">Hot questions</a>
+        {% endif %}
+    </h2></div>
+
+</div>
+
 {% for question in questions %}
 {% include "qa/question_block.html" %}
 {% endfor %}
+
+
+{% if questions.paginator.num_pages > 1 %}
+<div class="container-fluid">
+
+    <div class="row">
+        <div class="col-sm"></div>
+        <nav aria-label="Page navigation example">
+          <ul class="pagination">
+
+              {% if questions.has_previous %}
+              <li class="page-item">
+                  <a class="page-link" href="/?page=1" aria-label="First">
+                      <span aria-hidden="true">&laquo;</span>
+                      <span class="sr-only">First</span>
+                  </a>
+              </li>
+              <li class="page-item"><a class="page-link" href="/?page={{ questions.previous_page_number }}&sort={{sort}}">{{ questions.previous_page_number }}</a></li>
+              {% endif %}
+
+              <li class="page-item active">
+                    <a class="page-link" href="#">{{questions.number}}<span class="sr-only">{{questions.number}}</span></a>
+              </li>
+
+              {% if questions.has_next %}
+              <li class="page-item"><a class="page-link" href="/?page={{ questions.next_page_number }}&sort={{sort}}">{{ questions.next_page_number }}</a></li>
+              <li class="page-item">
+                  <a class="page-link" href="/?page={{questions.paginator.num_pages}}&sort={{sort}}" aria-label="Last">
+                      <span aria-hidden="true">&raquo;</span>
+                      <span class="sr-only">Last</span>
+                  </a>
+              </li>
+              {% endif %}
+          </ul>
+        </nav>
+        <div class="col-sm"></div>
+    </div>
+</div>
+{% endif %}
+
 
 {% endblock %}

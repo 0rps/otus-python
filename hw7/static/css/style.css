@@ -17,6 +17,20 @@
     /*flex-direction: row;*/
 /*}*/
 
+
+/* all */
+a {
+    text-decoration: none !important;
+}
+
+a.tag-link {
+    color: black;
+}
+
+
+/* base html */
+
+
 .trend-question-block {
     margin-top: 10px;
     margin-bottom: 10px;
@@ -32,6 +46,35 @@
     vertical-align: middle;
 }
 
+a.trend-link {
+    color: black;
+}
+
+a.ask-btn {
+    min-width: 130px;
+}
+
+a.logo {
+    color: black;
+}
+
+/* base html*/
+
+
+/* index   */
+.index-header {
+    color: gray;
+}
+
+a.index-header {
+    color: lightgray;
+}
+
+a.index-header:hover {
+    color: gray;
+}
+/* index */
+
 
 .question-bottom {
     margin-top: 15px;
@@ -40,10 +83,16 @@
 
 
 .tag-block {
-    background-color: #4d99da;
-    padding: 10px 20px;
+    background-color: lightskyblue;
+    padding: 3px 10px;
     margin-left: 10px;
-    margin-right:10px
+    margin-right:10px;
+    max-height: 30px;
+    max-width: 110px;
+}
+
+.tag-block > a {
+    color: black;
 }
 
 .answer-divider {

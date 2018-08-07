@@ -42,6 +42,29 @@ class Question(models.Model):
     def get_answers(self):
         return Answer.objects.filter(question__id=self.id)
 
+    def time_ago_str(self):
+        delta = datetime.datetime.now(datetime.timezone.utc) - self.date
+        delta = delta.seconds
+
+        if delta // (24 * 3600) > 0:
+            delta = delta // (24 * 3600)
+            unit, units = 'day', 'days'
+        elif delta // 3600 > 0:
+            delta = delta // 3600
+            unit, units = 'hour', 'hours'
+        elif delta // 60 > 0:
+            delta = delta // 60
+            unit, units = 'minute', 'minutes'
+        else:
+            unit, units = 'second', 'seconds'
+
+        if delta > 1:
+            msg = "{} {}".format(delta, units)
+        else:
+            msg = "{} {}".format(delta, unit)
+
+        return msg
+
 
 class Answer(models.Model):
     body = models.TextField()

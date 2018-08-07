@@ -32,7 +32,7 @@
         <div>
             <img src="/static/img/account.png" width="40px" height="40px" alt="Profile img"/>
         </div>
-        <div class="align-self-start" style="display: table" > {{user.login}}</div>
+        <div class="align-self-start" style="display: table" > {{question.author.login}}</div>
         <div class="col-sm" style="max-width: 60px"> </div>
     </div>
     <div class="row answer-divider"></div>
@@ -65,8 +65,9 @@
 </div>
 {% endfor %}
 
-<div class="container-fluid">
 
+{% if answers.paginator.num_pages > 1 %}
+<div class="container-fluid">
     <div class="row">
         <div class="col-sm"></div>
         <nav aria-label="Page navigation example">
@@ -100,7 +101,10 @@
         <div class="col-sm"></div>
     </div>
 </div>
+{% endif %}
 
+
+{% if user.is_authenticated%}
 <div>
     <form action="{% url 'question' question.id %}" method="post">
         {% csrf_token %}
@@ -118,6 +122,6 @@
       <button type="submit" class="btn btn-primary">Answer</button>
     </form>
 </div>
-
+{% endif%}
 
 {% endblock %}

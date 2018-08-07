@@ -1,24 +1,25 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-sm align-self-center" style="max-width: 100px; display:table">
-            <p class="text-center">1000 <br> votes </p>
+            <p class="text-center">{{question.rating}} <br> votes </p>
         </div>
         <div class="col-sm align-self-center" style="max-width: 100px; display:table">
-            <p class="text-center">10 <br> answers </p>
+            <p class="text-center">{{question.answers_count}} <br> answers </p>
         </div>
         <div class="col-sm container-fluid">
             <div class="row">
-                <h3>how much is the python</h3>
+                <h4><a href="{% url 'question' question.id %}">{{question.title}}</a></h4>
             </div>
             <div class="row">
-                <div class="tag-block">tag 1</div>
-                <div class="tag-block">tag 2</div>
+                {% for tag in question.tags.all %}
+                <div class="tag-block"> <a href="{% url 'search' %}?search={{'tag:'|urlencode}}{{tag.name|urlencode}}"> {{tag.name}} </a> </div>
+                {% endfor %}
                 <div class="col-sm">
                 </div>
                 <div>
                     <span class="text-center">
-                    <a href="#" >Semyon</a><br>
-                    asked mnogo dney nazad
+                    <a href="#" >{{question.author.login}}</a><br>
+                    asked {{question.time_ago_str}} ago
                     </span>
                 </div>
             </div>

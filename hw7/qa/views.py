@@ -11,7 +11,21 @@ from . import models
 
 @require_GET
 def index(request):
-    return render(request, 'qa/index.html')
+    count = 5
+    sort = request.GET.get('sort') or 'date'
+    page = request.GET.get('page') or 1
+
+    questions = models.Question.objects.all()
+
+    if sort == 'rating':
+        questions = questions.order_by('-rating')
+    else:
+        questions = questions.order_by('-date')
+
+    paginator = Paginator(questions, per_page=count)
+    context = {'questions': paginator.get_page(page), 'sort': sort}
+
+    return render(request, 'qa/index.html', context)
 
 
 @require_http_methods(['GET', 'POST'])
@@ -66,4 +80,5 @@ def question_answers(request, question_id):
 
 @require_GET
 def search(request):
+
     return render(request, 'qa/search.html', {})
