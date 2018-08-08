@@ -83,7 +83,7 @@
                     <div class="row "> <h2 class="rating-color my-0 mx-auto"> {{answer.rating}} </h2> </div>
                     <div class="row "> <span
                             {% if answer_rated %}
-                                {% if answer_rated == answer.id and answer_rated_down %}
+                                {% if answer.id == answer_rated and answer_rated_down %}
                                         class="rated-icon oi oi-chevron-bottom mx-auto"
                                         onclick="cancelVoteAnswer({{ answer.id }})"
                                     {% else %}

@@ -71,9 +71,20 @@ def question_answers(request, question_id):
             form = forms.AnswerForm()
         page = paginator.num_pages
 
+    q_like = models.QuestionLike.objects.filter(user__id=request.user.id)
+    q_like = q_like[0] if len(q_like) > 0 else None
+    a_like = models.AnswerLike.question_answer_like(request.user, question)
+
     context = {'question': question,
                'main_form': form,
-               'answers': paginator.get_page(page)}
+               'answers': paginator.get_page(page),
+               'question_rated': q_like,
+               'question_rated_up': q_like and q_like.is_like,
+               'question_rated_down': q_like and not q_like.is_like,
+               'answer_rated': a_like and a_like.answer.id,
+               'answer_rated_up': a_like and a_like.is_like,
+               'answer_rated_down': a_like and not a_like.is_like,
+               }
 
     return render(request, 'qa/question_answers.html', context)
 
@@ -96,12 +107,18 @@ def star_answer(request, answer_id):
         return HttpResponseForbidden()
 
 
-@require_POST
 @login_required(login_url=reverse_lazy('login'))
 def unstar_answer(request, answer_id):
-    answer = get_object_or_404(models.Answer, answer_id)
-    if answer.author.id == request.user.id:
-        return HttpResponseForbidden()
+    # answer = get_object_or_404(models.Answer, answer_id)
+    # if answer.author.id == request.user.id:
+    #     return HttpResponseForbidden()
+
+    result = models.AnswerLike.objects.filter(answer__id=answer_id)
+    if len(result) > 0:
+        like = result[0]
+        like.cancel_like()
+
+    return HttpResponseRedirect(request.META['HTTP_REFERER'])
 
 
 @login_required(login_url=reverse_lazy('login'))
@@ -121,9 +138,12 @@ def vote_answer(request, answer_id):
 
 @login_required(login_url=reverse_lazy('login'))
 def unvote_answer(request, answer_id):
-    answer = get_object_or_404(models.Answer, answer_id)
-    if answer.author.id == request.user.id:
-        return HttpResponseForbidden()
+    result = models.AnswerLike.objects.filter(answer__id=answer_id)
+    if len(result) > 0:
+        like = result[0]
+        like.cancel_like()
+
+    return HttpResponseRedirect(request.META['HTTP_REFERER'])
 
 
 @require_POST

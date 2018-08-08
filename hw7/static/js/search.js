@@ -27,6 +27,7 @@ function cancelVoteQuestion(qId) {
 }
 
 function cancelVoteAnswer(aId) {
+    window.location.href = "/qa/answer/" + aId + '/unvote' ;
 
 }
 

@@ -59,7 +59,7 @@ class Question(models.Model):
         return cls.objects.filter(tags__in=[tag.id for tag in tags]).order_by('-rating', '-date')
 
     def get_answers(self):
-        return Answer.objects.filter(question__id=self.id)
+        return Answer.objects.filter(question__id=self.id).order_by('-rating', '-date')
 
     def time_ago_str(self):
         delta = datetime.datetime.now(datetime.timezone.utc) - self.date
@@ -153,7 +153,15 @@ class AnswerLike(models.Model):
         like.save()
         answer.save()
 
+    @classmethod
+    def question_answer_like(cls, user, question):
+        result = cls.objects.filter(answer__question__id=question.id).filter(user__id=user.id)
+        return None if len(result) == 0 else result[0]
+
     def cancel_like(self):
-        self.answer.rating -= 1
+        if self.is_like:
+            self.answer.rating -= 1
+        else:
+            self.answer.rating += 1
         self.delete()
         self.answer.save()
