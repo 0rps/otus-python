@@ -39,6 +39,25 @@ class Question(models.Model):
         q.save()
         return q
 
+    @classmethod
+    def search(cls, query):
+        if 'tag:' not in query:
+            return cls.objects.filter(models.Q(title__icontains=query) |
+                                      models.Q(body__icontains=query)).order_by('-rating', '-date')
+
+        tag_names = [x.strip(',').lower() for x in query.split('tag:') if len(x.strip(',')) > 0]
+        if len(tag_names) == 0:
+            return []
+
+        tags = []
+        for tag_name in tag_names:
+            search_results = Tag.objects.filter(name__exact=tag_name)
+            if len(search_results) == 0:
+                return []
+            tags.append(search_results[0])
+
+        return cls.objects.filter(tags__in=[tag.id for tag in tags]).order_by('-rating', '-date')
+
     def get_answers(self):
         return Answer.objects.filter(question__id=self.id)
 

@@ -80,5 +80,9 @@ def question_answers(request, question_id):
 
 @require_GET
 def search(request):
+    count = 5
+    query = request.GET.get('q')
+    page = request.GET.get('page') or 1
 
-    return render(request, 'qa/search.html', {})
+    paginator = Paginator(models.Question.search(query), per_page=count)
+    return render(request, 'qa/search.html', {'query': query, 'questions': paginator.get_page(page)})

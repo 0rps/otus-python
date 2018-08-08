@@ -5,9 +5,20 @@ document.addEventListener("DOMContentLoaded",
     function key_up_event(event) {
         if (event.keyCode === 13) {
             var value = search.value;
-            console.log(value);
+            if (value.length !== 0 ) {
+                window.location.href = "/qa/search?" + 'q=' + encodeURIComponent(value);
+            }
         }
     }
 
     search.onkeyup = key_up_event;
 });
+
+
+function vote_question() {
+
+}
+
+function vote_answer() {
+
+}
