@@ -14,11 +14,33 @@ document.addEventListener("DOMContentLoaded",
     search.onkeyup = key_up_event;
 });
 
-
-function vote_question() {
+function starAnswer(aId) {
 
 }
 
-function vote_answer() {
+function unstarAnswer(aId) {
 
+}
+
+function cancelVoteQuestion(qId) {
+
+}
+
+function cancelVoteAnswer(aId) {
+
+}
+
+function voteQuestion(qId, isUp) {
+    console.log(qId, isUp);
+}
+
+function voteAnswer(aId, isUp) {
+    var like;
+    if (isUp) {
+        like = 1;
+    } else {
+        like = -1;
+    }
+
+    window.location.href = "/qa/answer/" + aId + '/vote?' + 'like=' + encodeURIComponent(like);
 }

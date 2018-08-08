@@ -13,9 +13,33 @@
     <div class="row">
         <div class="col-sm px-0" style="max-width: 70px" >
                 <div class="container-fluid">
-                    <div class="row "> <span class="oi oi-chevron-top mx-auto" aria-hidden="true"></span> </div>
-                    <div class="row "> <h2 class="my-0 mx-auto"> {{question.rating}} </h2> </div>
-                    <div class="row  "> <span class="oi oi-chevron-bottom mx-auto" aria-hidden="true"></span> </div>
+                    <div class="row "> <span
+                            {% if question_rated %}
+                                {% if question_rated_up%}
+                                    class="rated-icon oi oi-chevron-top mx-auto"
+                                    onclick="cancelVoteQuestion({{ question.id }})"
+                                {% else %}
+                                    class="non-rated-icon oi oi-chevron-top mx-auto"
+                                {% endif %}
+                            {% else%}
+                                class=  "rating-icon oi oi-chevron-top mx-auto"
+                                onclick="voteQuestion({{question.id}}, true)"
+                            {% endif%}
+                            aria-hidden="true"></span> </div>
+                    <div class="row "> <h2 class="rating-color my-0 mx-auto"> {{question.rating}} </h2> </div>
+                    <div class="row  "> <span
+                            {% if question_rated %}
+                                {% if question_rated_down%}
+                                    class="rated-icon oi oi-chevron-bottom mx-auto"
+                                    onclick="cancelVoteQuestion({{ question.id }})"
+                                {% else %}
+                                    class="non-rated-icon oi oi-chevron-bottom mx-auto"
+                                {% endif %}
+                            {% else%}
+                                class="rating-icon oi oi-chevron-bottom mx-auto"
+                                onclick="voteQuestion({{question.id}}, false)"
+                            {% endif%}
+                            aria-hidden="true"></span> </div>
                 </div>
         </div>
 
@@ -43,9 +67,32 @@
     <div class="row">
         <div class="col-sm px-0" style="max-width: 70px" >
                 <div class="container-fluid">
-                    <div class="row "> <span class="oi oi-chevron-top mx-auto" aria-hidden="true"></span> </div>
-                    <div class="row "> <h2 class="my-0 mx-auto"> {{answer.rating}} </h2> </div>
-                    <div class="row "> <span class="oi oi-chevron-bottom mx-auto" aria-hidden="true"></span> </div>
+                    <div class="row "> <span
+                            {% if answer_rated %}
+                                {% if answer_rated == answer.id and answer_rated_up %}
+                                        class="rated-icon oi oi-chevron-top mx-auto"
+                                        onclick="cancelVoteAnswer({{ answer.id }})"
+                                    {% else %}
+                                        class="non-rated-icon oi oi-chevron-top mx-auto"
+                                    {% endif %}
+                            {% else%}
+                                class=  "rating-icon oi oi-chevron-top mx-auto"
+                                onclick="voteAnswer({{ answer.id }}, true)"
+                            {% endif%}
+                            aria-hidden="true"></span> </div>
+                    <div class="row "> <h2 class="rating-color my-0 mx-auto"> {{answer.rating}} </h2> </div>
+                    <div class="row "> <span
+                            {% if answer_rated %}
+                                {% if answer_rated == answer.id and answer_rated_down %}
+                                        class="rated-icon oi oi-chevron-bottom mx-auto"
+                                        onclick="cancelVoteAnswer({{ answer.id }})"
+                                    {% else %}
+                                        class="non-rated-icon oi oi-chevron-bottom mx-auto"
+                                    {% endif %}
+                            {% else%}
+                                class=  "rating-icon oi oi-chevron-bottom mx-auto" onclick="voteAnswer({{ answer.id }}, false)"
+                            {% endif%}
+                            aria-hidden="true"></span> </div>
                 </div>
         </div>
 

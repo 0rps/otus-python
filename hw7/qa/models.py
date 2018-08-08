@@ -112,9 +112,48 @@ class QuestionLike(models.Model):
     user = models.ForeignKey(user_models.User, on_delete=models.CASCADE)
     is_like = models.BooleanField()
 
+    @classmethod
+    def create(cls, question, user, is_like):
+        if is_like:
+            question.rating += 1
+        else:
+            question.rating -= 1
+
+        like = cls()
+        like.question = question
+        like.user = user
+        like.is_like = is_like
+
+        like.save()
+        question.save()
+
+    def cancel_like(self):
+        self.question.rating -= 1
+        self.delete()
+        self.question.save()
+
 
 class AnswerLike(models.Model):
     answer = models.ForeignKey(Answer, on_delete=models.CASCADE)
     user = models.ForeignKey(user_models.User, on_delete=models.CASCADE)
     is_like = models.BooleanField()
 
+    @classmethod
+    def create(cls, answer, user, is_like):
+        if is_like:
+            answer.rating += 1
+        else:
+            answer.rating -= 1
+
+        like = cls()
+        like.answer = answer
+        like.user = user
+        like.is_like = is_like
+
+        like.save()
+        answer.save()
+
+    def cancel_like(self):
+        self.answer.rating -= 1
+        self.delete()
+        self.answer.save()

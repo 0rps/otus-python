@@ -2,8 +2,8 @@ from django.urls import reverse_lazy, reverse
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
-from django.views.decorators.http import require_GET, require_http_methods
-from django.http.response import HttpResponseRedirect
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from django.http.response import HttpResponseRedirect, HttpResponseForbidden
 
 from . import forms
 from . import models
@@ -86,3 +86,57 @@ def search(request):
 
     paginator = Paginator(models.Question.search(query), per_page=count)
     return render(request, 'qa/search.html', {'query': query, 'questions': paginator.get_page(page)})
+
+
+@require_POST
+@login_required(login_url=reverse_lazy('login'))
+def star_answer(request, answer_id):
+    answer = get_object_or_404(models.Answer, answer_id)
+    if answer.author.id == request.user.id:
+        return HttpResponseForbidden()
+
+
+@require_POST
+@login_required(login_url=reverse_lazy('login'))
+def unstar_answer(request, answer_id):
+    answer = get_object_or_404(models.Answer, answer_id)
+    if answer.author.id == request.user.id:
+        return HttpResponseForbidden()
+
+
+@login_required(login_url=reverse_lazy('login'))
+def vote_answer(request, answer_id):
+    is_like = int(request.GET.get('like'))
+    is_like = is_like > 0
+    answer = get_object_or_404(models.Answer, pk=answer_id)
+    # if answer.author.id == request.user.id:
+    #     return HttpResponseForbidden()
+
+    answer_likes = models.AnswerLike.objects.filter(answer__id=answer_id).filter(user__id=request.user.id)
+    if len(answer_likes) == 0:
+        models.AnswerLike.create(answer, request.user, is_like)
+
+    return HttpResponseRedirect(request.META['HTTP_REFERER'])
+
+
+@login_required(login_url=reverse_lazy('login'))
+def unvote_answer(request, answer_id):
+    answer = get_object_or_404(models.Answer, answer_id)
+    if answer.author.id == request.user.id:
+        return HttpResponseForbidden()
+
+
+@require_POST
+@login_required(login_url=reverse_lazy('login'))
+def vote_question(request, question_id):
+    question = get_object_or_404(models.Question, question_id)
+    if question.author.id == request.user.id:
+        return HttpResponseForbidden()
+
+
+@require_POST
+@login_required(login_url=reverse_lazy('login'))
+def unvote_question(request, question_id):
+    question = get_object_or_404(models.Question, question_id)
+    if question.author.id == request.user.id:
+        return HttpResponseForbidden()

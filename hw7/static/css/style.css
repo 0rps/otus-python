@@ -61,6 +61,28 @@ a.index-header:hover {
     margin-bottom: 15px;
 }
 
+.rating-color {
+    color: gray;
+}
+
+.rated-icon {
+    color: black;
+}
+
+.non-rated-icon {
+    color: gray;
+}
+
+.rating-icon {
+    color: gray;
+}
+
+.rating-icon:hover {
+    color: black;
+}
+
+
+
 
 .tag-block {
     background-color: lightskyblue;

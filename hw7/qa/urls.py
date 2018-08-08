@@ -26,4 +26,11 @@ urlpatterns = [
     path('qa/question/<int:question_id>/', views.question_answers, name='question'),
     path('qa/search/', views.search, name='search'),
     path('users/', include('users.urls')),
+    path('qa/question/<int:question_id>/vote', views.vote_question, name='question_vote'),
+    path('qa/question/<int:question_id>/unvote', views.unvote_question, name='question_unvote'),
+    path('qa/answer/<int:answer_id>/vote', views.vote_answer, name='answer_vote'),
+    path('qa/answer/<int:answer_id>/unvote', views.unstar_answer, name='answer_unvote'),
+    path('qa/answer/<int:answer_id>/star', views.star_answer, name='answer_star'),
+    path('qa/answer/<int:answer_id>/unstar', views.unstar_answer, name='answer_unstar')
+
 ]
