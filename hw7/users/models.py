@@ -3,6 +3,7 @@ import datetime
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from django.core.mail import send_mail
+from django.conf import settings
 
 
 class User(AbstractBaseUser):
@@ -19,6 +20,9 @@ class User(AbstractBaseUser):
     def create_user(cls, cleaned_data):
         user = cls(register_date=datetime.datetime.utcnow(), **cleaned_data)
         user.save()
+        send_mail("Hasker registration",
+                  "Welcome to hasker, mr. {}".format(user.login),
+                  settings.EMAIL_HOST_USER, [user.email])
 
     def update_email_avatar(self, email, avatar):
         if avatar is not None:
@@ -28,6 +32,3 @@ class User(AbstractBaseUser):
             self.email = email
 
         self.save()
-        send_mail("Hasker registration",
-                  "Welcome to hasker, mr. {}".format(self.login),
-                  "admin@hasker.net", [self.email])
