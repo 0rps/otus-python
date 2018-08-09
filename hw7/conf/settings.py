@@ -119,8 +119,8 @@ USE_TZ = True
 
 AUTHENTICATION_BACKENDS = ['users.auth.SimpleAuthBackend']
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.0/howto/static-files/
+
+MEDIA_ROOT = "media/"
 
 STATIC_URL = '/static/'
 

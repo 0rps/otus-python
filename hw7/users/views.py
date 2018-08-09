@@ -63,7 +63,9 @@ def profile_view(request, user_id):
         return HttpResponseForbidden()
 
     if request.method == 'GET':
-        form = user_forms.ProfileForm()
+        form = user_forms.ProfileForm(initial={'login': request.user.login,
+                                               'email': request.user.email,
+                                               'avatar': request.user.avatar})
     else:
         form = user_forms.ProfileForm(request.POST)
         if form.is_valid():
@@ -72,7 +74,7 @@ def profile_view(request, user_id):
                 data['avatar'] = request.FILES['avatar']
             else:
                 data['avatar'] = None
-            request.user.update_email_avatar(**data)
+            request.user.update_email_avatar(data['email'], data['avatar'])
             form = user_forms.ProfileForm(request.POST)
 
     return render(request, 'users/profile.html', {'main_form': form})

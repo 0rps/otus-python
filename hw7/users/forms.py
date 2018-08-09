@@ -51,7 +51,7 @@ class LoginForm(forms.Form):
                             min_length=4,
                             max_length=32,
                             widget=forms.TextInput(attrs={'class': 'form-control',
-                                                          'placeholder': 'Login or email'}))
+                                                          'placeholder': 'Login'}))
     password = forms.CharField(label='Password',
                                min_length=6,
                                widget=forms.PasswordInput(attrs={'class': 'form-control',
@@ -60,7 +60,9 @@ class LoginForm(forms.Form):
 
 class ProfileForm(forms.Form):
 
+    login = forms.CharField(label='Login', widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': True}))
+
     email = forms.EmailField(label='Email',
                              widget=forms.EmailInput(attrs={'class': 'form-control',
                                                             'placeholder': 'Email'}))
-    avatar = forms.ImageField(label='Avatar image', required=False)
+    avatar = forms.ImageField(label='Avatar', required=False)
