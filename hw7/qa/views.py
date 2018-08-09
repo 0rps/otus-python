@@ -3,7 +3,10 @@ from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
-from django.http.response import HttpResponseRedirect, HttpResponseForbidden, HttpResponseBadRequest
+from django.http.response import (HttpResponse,
+                                  HttpResponseRedirect,
+                                  HttpResponseForbidden,
+                                  HttpResponseBadRequest)
 
 from . import forms
 from . import models
@@ -109,7 +112,7 @@ def star_answer(request, answer_id):
         return HttpResponseForbidden()
 
     answer.question.set_correct_answer(answer)
-    return HttpResponseRedirect(request.META['HTTP_REFERER'])
+    return HttpResponse()
 
 
 @login_required(login_url=reverse_lazy('login'))
@@ -119,7 +122,7 @@ def unstar_answer(request, answer_id):
         return HttpResponseForbidden()
 
     answer.question.cancel_correct_answer()
-    return HttpResponseRedirect(request.META['HTTP_REFERER'])
+    return HttpResponse()
 
 
 @login_required(login_url=reverse_lazy('login'))
@@ -140,7 +143,7 @@ def vote_answer(request, answer_id):
     else:
         return HttpResponseForbidden()
 
-    return HttpResponseRedirect(request.META['HTTP_REFERER'])
+    return HttpResponse()
 
 
 @login_required(login_url=reverse_lazy('login'))
@@ -150,13 +153,14 @@ def unvote_answer(request, answer_id):
         like = result[0]
         like.cancel_like()
 
-    return HttpResponseRedirect(request.META['HTTP_REFERER'])
+    return HttpResponse()
 
 
+@require_POST
 @login_required(login_url=reverse_lazy('login'))
 def vote_question(request, question_id):
     try:
-        is_like = int(request.GET.get('like'))
+        is_like = int(request.POST.get('like'))
     except ValueError:
         return HttpResponseBadRequest()
 
@@ -173,13 +177,14 @@ def vote_question(request, question_id):
     else:
         return HttpResponseForbidden()
 
-    return HttpResponseRedirect(request.META['HTTP_REFERER'])
+    return HttpResponse()
 
 
+@require_POST
 @login_required(login_url=reverse_lazy('login'))
 def unvote_question(request, question_id):
     result = models.QuestionLike.objects.filter(question__id=question_id)
     if len(result) > 0:
         result[0].cancel_like()
 
-    return HttpResponseRedirect(request.META['HTTP_REFERER'])
+    return HttpResponse()
