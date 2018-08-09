@@ -1,6 +1,7 @@
 import datetime
 
 from django.db import models
+from django.core.mail import send_mail
 from users import models as user_models
 
 
@@ -124,6 +125,11 @@ class Answer(models.Model):
 
         question.answers_count += 1
         question.save()
+
+        send_mail("You have one answer on Hasker",
+                  "User '{}' answered your question '{}'"
+                  .format(user.login, question.title),
+                  "admin@hasker.net", [question.author.email])
 
         return answer
 
