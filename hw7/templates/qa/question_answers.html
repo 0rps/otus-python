@@ -19,7 +19,7 @@
                                 onclick="cancelVoteQuestion({{ question.id }})"
                             {% elif question_rated %}
                                 class="non-rated-icon oi oi-chevron-top mx-auto"
-                            {% else %}
+                            {% elif question.author.id != user.id %}
                                 class="rating-icon oi oi-chevron-top mx-auto"
                                 onclick="voteQuestion({{question.id}}, true)"
                             {% endif %}
@@ -31,7 +31,7 @@
                                 onclick="cancelVoteQuestion({{ question.id }})"
                             {% elif question_rated %}
                                 class="non-rated-icon oi oi-chevron-bottom mx-auto"
-                            {% else%}
+                            {% elif question.author.id != user.id %}
                                 class="rating-icon oi oi-chevron-bottom mx-auto"
                                 onclick="voteQuestion({{question.id}}, false)"
                             {% endif%}
@@ -73,7 +73,7 @@
                                 onclick="cancelVoteAnswer({{ answer.id }})"
                             {% elif answer_rated %}
                                 class="non-rated-icon oi oi-chevron-top mx-auto"
-                            {% else%}
+                            {% elif answer.author.id != user.id %}
                                 class="rating-icon oi oi-chevron-top mx-auto"
                                 onclick="voteAnswer({{ answer.id }}, true)"
                             {% endif%}
@@ -85,7 +85,7 @@
                                 onclick="cancelVoteAnswer({{ answer.id }})"
                             {% elif answer_rated %}
                                 class="non-rated-icon oi oi-chevron-bottom mx-auto"
-                            {% else%}
+                            {% elif answer.author.id != user.id %}
                                 class="rating-icon oi oi-chevron-bottom mx-auto" onclick="voteAnswer({{ answer.id }}, false)"
                             {% endif%}
                             ></span> </div>

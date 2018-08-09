@@ -134,8 +134,8 @@ def vote_answer(request, answer_id):
     is_like = is_like > 0
     answer = get_object_or_404(models.Answer, pk=answer_id)
 
-    # if answer.author.id == request.user.id:
-    #     return HttpResponseForbidden()
+    if answer.author.id == request.user.id:
+        return HttpResponseForbidden()
 
     answer_likes = models.AnswerLike.objects.filter(answer__id=answer_id).filter(user__id=request.user.id)
     if len(answer_likes) == 0:
@@ -166,8 +166,8 @@ def vote_question(request, question_id):
 
     is_like = is_like > 0
     question = get_object_or_404(models.Question, pk=question_id)
-    # if answer.author.id == request.user.id:
-    #     return HttpResponseForbidden()
+    if question.author.id == request.user.id:
+        return HttpResponseForbidden()
 
     question_likes = models.QuestionLike.objects\
         .filter(question__id=question_id)\

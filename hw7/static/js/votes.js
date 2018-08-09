@@ -17,7 +17,7 @@ function _send_query_with_reload(url, data) {
 
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
-            window.location.reload(false);
+            window.location.href = window.location.href
         }
     };
     xhr.send(formData);
