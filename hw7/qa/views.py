@@ -69,7 +69,9 @@ def question_answers(request, question_id):
             form = forms.AnswerForm()
         page = paginator.num_pages
 
-    q_like = models.QuestionLike.objects.filter(user__id=request.user.id)
+    q_like = models.QuestionLike.objects\
+        .filter(question__id=question_id)\
+        .filter(user__id=request.user.id)
     q_like = q_like[0] if len(q_like) > 0 else None
     a_like = models.AnswerLike.question_answer_like(request.user, question)
 

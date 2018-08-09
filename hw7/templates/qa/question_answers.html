@@ -14,7 +14,7 @@
         <div class="col-sm px-0" style="max-width: 70px" >
                 <div class="container-fluid">
                     <div class="row "> <span
-                            {% if question_rated_up%}
+                            {% if question_rated_up %}
                                 class="rated-icon oi oi-chevron-top mx-auto"
                                 onclick="cancelVoteQuestion({{ question.id }})"
                             {% elif question_rated %}
@@ -74,7 +74,7 @@
                             {% elif answer_rated %}
                                 class="non-rated-icon oi oi-chevron-top mx-auto"
                             {% else%}
-                                class=  "rating-icon oi oi-chevron-top mx-auto"
+                                class="rating-icon oi oi-chevron-top mx-auto"
                                 onclick="voteAnswer({{ answer.id }}, true)"
                             {% endif%}
                             ></span> </div>
@@ -86,7 +86,7 @@
                             {% elif answer_rated %}
                                 class="non-rated-icon oi oi-chevron-bottom mx-auto"
                             {% else%}
-                                class=  "rating-icon oi oi-chevron-bottom mx-auto" onclick="voteAnswer({{ answer.id }}, false)"
+                                class="rating-icon oi oi-chevron-bottom mx-auto" onclick="voteAnswer({{ answer.id }}, false)"
                             {% endif%}
                             ></span> </div>
 
