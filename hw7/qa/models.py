@@ -11,9 +11,10 @@ class Tag(models.Model):
 class Question(models.Model):
     title = models.CharField(max_length=128, null=False)
     body = models.TextField()
-    date = models.DateTimeField(default=datetime.datetime.utcnow)
+    date = models.DateTimeField()
     rating = models.IntegerField(default=0)
     answers_count = models.IntegerField(default=0)
+    has_correct_answer = models.BooleanField(default=False)
     author = models.ForeignKey(user_models.User, on_delete=models.CASCADE)
     tags = models.ManyToManyField(Tag)
 
@@ -23,6 +24,7 @@ class Question(models.Model):
         q.author = user
         q.title = title
         q.body = body
+        q.date = datetime.datetime.utcnow()
 
         q.save()
 
@@ -59,7 +61,26 @@ class Question(models.Model):
         return cls.objects.filter(tags__in=[tag.id for tag in tags]).order_by('-rating', '-date')
 
     def get_answers(self):
-        return Answer.objects.filter(question__id=self.id).order_by('-rating', '-date')
+        return Answer.objects.filter(question__id=self.id).order_by('-rating', 'date')
+
+    def set_correct_answer(self, answer):
+        answer.is_correct = True
+        self.has_correct_answer = True
+
+        answer.save()
+        self.save()
+
+    def cancel_correct_answer(self):
+        answer_set = Answer.objects.filter(question__id=self.id).filter(is_correct=True)
+        if len(answer_set) == 0:
+            return
+
+        answer = answer_set[0]
+        answer.is_correct = False
+        answer.save()
+
+        self.has_correct_answer = False
+        self.save()
 
     def time_ago_str(self):
         delta = datetime.datetime.now(datetime.timezone.utc) - self.date
@@ -128,7 +149,10 @@ class QuestionLike(models.Model):
         question.save()
 
     def cancel_like(self):
-        self.question.rating -= 1
+        if self.is_like:
+            self.question.rating -= 1
+        else:
+            self.question.rating += 1
         self.delete()
         self.question.save()
 

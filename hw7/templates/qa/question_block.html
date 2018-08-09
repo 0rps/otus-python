@@ -12,13 +12,13 @@
             </div>
             <div class="row">
                 {% for tag in question.tags.all %}
-                <div class="tag-block"> <a href="{% url 'search' %}?search={{'tag:'|urlencode}}{{tag.name|urlencode}}"> {{tag.name}} </a> </div>
+                <div class="tag-block"> <a href="{% url 'search' %}?q={{'tag:'|urlencode}}{{tag.name|urlencode}}"> {{tag.name}} </a> </div>
                 {% endfor %}
                 <div class="col-sm">
                 </div>
                 <div>
                     <span class="text-center">
-                    <a href="#" >{{question.author.login}}</a><br>
+                    {{question.author.login}}<br>
                     asked {{question.time_ago_str}} ago
                     </span>
                 </div>

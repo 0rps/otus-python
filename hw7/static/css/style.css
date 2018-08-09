@@ -81,7 +81,21 @@ a.index-header:hover {
     color: black;
 }
 
+.starred-icon {
+    color: black;
+}
 
+.non-starred-icon {
+    color:lightgray;
+}
+
+.starred-candidate-icon {
+    color: lightgray;
+}
+
+.starred-candidate-icon:hover {
+    color:black;
+}
 
 
 .tag-block {

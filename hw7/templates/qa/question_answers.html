@@ -14,27 +14,23 @@
         <div class="col-sm px-0" style="max-width: 70px" >
                 <div class="container-fluid">
                     <div class="row "> <span
-                            {% if question_rated %}
-                                {% if question_rated_up%}
-                                    class="rated-icon oi oi-chevron-top mx-auto"
-                                    onclick="cancelVoteQuestion({{ question.id }})"
-                                {% else %}
-                                    class="non-rated-icon oi oi-chevron-top mx-auto"
-                                {% endif %}
-                            {% else%}
-                                class=  "rating-icon oi oi-chevron-top mx-auto"
+                            {% if question_rated_up%}
+                                class="rated-icon oi oi-chevron-top mx-auto"
+                                onclick="cancelVoteQuestion({{ question.id }})"
+                            {% elif question_rated %}
+                                class="non-rated-icon oi oi-chevron-top mx-auto"
+                            {% else %}
+                                class="rating-icon oi oi-chevron-top mx-auto"
                                 onclick="voteQuestion({{question.id}}, true)"
-                            {% endif%}
+                            {% endif %}
                             aria-hidden="true"></span> </div>
                     <div class="row "> <h2 class="rating-color my-0 mx-auto"> {{question.rating}} </h2> </div>
                     <div class="row  "> <span
-                            {% if question_rated %}
-                                {% if question_rated_down%}
-                                    class="rated-icon oi oi-chevron-bottom mx-auto"
-                                    onclick="cancelVoteQuestion({{ question.id }})"
-                                {% else %}
-                                    class="non-rated-icon oi oi-chevron-bottom mx-auto"
-                                {% endif %}
+                            {% if question_rated_down%}
+                                class="rated-icon oi oi-chevron-bottom mx-auto"
+                                onclick="cancelVoteQuestion({{ question.id }})"
+                            {% elif question_rated %}
+                                class="non-rated-icon oi oi-chevron-bottom mx-auto"
                             {% else%}
                                 class="rating-icon oi oi-chevron-bottom mx-auto"
                                 onclick="voteQuestion({{question.id}}, false)"
@@ -49,12 +45,16 @@
     </div>
     <div class="row question-bottom">
         {% for tag in question.tags.all %}
-            <div class="tag-block">{{tag.name}}</div>
+            <div class="tag-block"> <a href="{% url 'search' %}?q={{'tag:'|urlencode}}{{tag.name|urlencode}}"> {{tag.name}} </a> </div>
         {% endfor%}
 
         <div class="col-sm"> </div>
         <div>
-            <img src="/static/img/account.png" width="40px" height="40px" alt="Profile img"/>
+            {% if question.author.avatar %}
+                <img src="{% url 'avatar' question.author.id %}" width="40px" height="40px" alt="Profile img"/>
+            {% else %}
+                <img src="/static/img/account.png" width="40px" height="40px" alt="Profile img"/>
+            {% endif%}
         </div>
         <div class="align-self-start" style="display: table" > {{question.author.login}}</div>
         <div class="col-sm" style="max-width: 60px"> </div>
@@ -68,31 +68,46 @@
         <div class="col-sm px-0" style="max-width: 70px" >
                 <div class="container-fluid">
                     <div class="row "> <span
-                            {% if answer_rated %}
-                                {% if answer_rated == answer.id and answer_rated_up %}
-                                        class="rated-icon oi oi-chevron-top mx-auto"
-                                        onclick="cancelVoteAnswer({{ answer.id }})"
-                                    {% else %}
-                                        class="non-rated-icon oi oi-chevron-top mx-auto"
-                                    {% endif %}
+                            {% if answer_rated == answer.id and answer_rated_up %}
+                                class="rated-icon oi oi-chevron-top mx-auto"
+                                onclick="cancelVoteAnswer({{ answer.id }})"
+                            {% elif answer_rated %}
+                                class="non-rated-icon oi oi-chevron-top mx-auto"
                             {% else%}
                                 class=  "rating-icon oi oi-chevron-top mx-auto"
                                 onclick="voteAnswer({{ answer.id }}, true)"
                             {% endif%}
-                            aria-hidden="true"></span> </div>
+                            ></span> </div>
                     <div class="row "> <h2 class="rating-color my-0 mx-auto"> {{answer.rating}} </h2> </div>
                     <div class="row "> <span
-                            {% if answer_rated %}
-                                {% if answer.id == answer_rated and answer_rated_down %}
-                                        class="rated-icon oi oi-chevron-bottom mx-auto"
-                                        onclick="cancelVoteAnswer({{ answer.id }})"
-                                    {% else %}
-                                        class="non-rated-icon oi oi-chevron-bottom mx-auto"
-                                    {% endif %}
+                            {% if answer.id == answer_rated and answer_rated_down %}
+                                class="rated-icon oi oi-chevron-bottom mx-auto"
+                                onclick="cancelVoteAnswer({{ answer.id }})"
+                            {% elif answer_rated %}
+                                class="non-rated-icon oi oi-chevron-bottom mx-auto"
                             {% else%}
                                 class=  "rating-icon oi oi-chevron-bottom mx-auto" onclick="voteAnswer({{ answer.id }}, false)"
                             {% endif%}
-                            aria-hidden="true"></span> </div>
+                            ></span> </div>
+
+                    {% if answer.is_correct%}
+                    <div class="row">
+                        <span
+                                class="starred-icon oi oi-star mx-auto"
+                                style="margin-top: 10px"
+                                onclick="unstarAnswer({{answer.id}})"
+                        ></span>
+                    </div>
+                    {% elif not question.has_correct_answer and user.id == question.author.id %}
+                    <div class="row">
+                        <span
+                                class="starred-candidate-icon oi oi-star mx-auto"
+                                style="margin-top: 10px"
+                                onclick="starAnswer({{answer.id}})"
+                        ></span>
+                    </div>
+                    {% endif %}
+
                 </div>
         </div>
 
@@ -103,7 +118,11 @@
     <div class="row question-bottom">
         <div class="col-sm"> </div>
         <div>
-            <img src="/static/img/account.png" width="40px" height="40px" alt="Profile img"/>
+            {% if answer.author.avatar %}
+                <img src="{% url 'avatar' answer.author.id %}" width="40px" height="40px" alt="Profile img"/>
+            {% else %}
+                <img src="/static/img/account.png" width="40px" height="40px" alt="Profile img"/>
+            {% endif%}
         </div>
         <div class="align-self-start" style="display: table" > {{answer.author.login}}</div>
         <div class="col-sm" style="max-width: 60px"> </div>
