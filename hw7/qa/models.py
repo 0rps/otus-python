@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import models
-from django.conf import  settings
+from django.conf import settings
 from django.core.mail import send_mail
 from users import models as user_models
 
