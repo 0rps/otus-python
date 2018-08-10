@@ -1,6 +1,6 @@
 import datetime
 
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.core.mail import send_mail
 from users import models as user_models
@@ -21,6 +21,7 @@ class Question(models.Model):
     tags = models.ManyToManyField(Tag)
 
     @classmethod
+    @transaction.atomic
     def create(cls, user, title, body, tags):
         q = cls()
         q.author = user
@@ -65,6 +66,7 @@ class Question(models.Model):
     def get_answers(self):
         return Answer.objects.filter(question__id=self.id).order_by('-rating', 'date')
 
+    @transaction.atomic
     def set_correct_answer(self, answer):
         answer.is_correct = True
         self.has_correct_answer = True
@@ -72,6 +74,7 @@ class Question(models.Model):
         answer.save()
         self.save()
 
+    @transaction.atomic
     def cancel_correct_answer(self):
         answer_set = Answer.objects.filter(question__id=self.id).filter(is_correct=True)
         if len(answer_set) == 0:
@@ -141,6 +144,7 @@ class QuestionLike(models.Model):
     is_like = models.BooleanField()
 
     @classmethod
+    @transaction.atomic
     def create(cls, question, user, is_like):
         if is_like:
             question.rating += 1
@@ -155,6 +159,7 @@ class QuestionLike(models.Model):
         like.save()
         question.save()
 
+    @transaction.atomic
     def cancel_like(self):
         if self.is_like:
             self.question.rating -= 1
@@ -170,6 +175,7 @@ class AnswerLike(models.Model):
     is_like = models.BooleanField()
 
     @classmethod
+    @transaction.atomic
     def create(cls, answer, user, is_like):
         if is_like:
             answer.rating += 1
@@ -189,6 +195,7 @@ class AnswerLike(models.Model):
         result = cls.objects.filter(answer__question__id=question.id).filter(user__id=user.id)
         return None if len(result) == 0 else result[0]
 
+    @transaction.atomic
     def cancel_like(self):
         if self.is_like:
             self.answer.rating -= 1
