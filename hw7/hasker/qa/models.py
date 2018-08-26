@@ -3,7 +3,7 @@ import datetime
 from django.db import models, transaction
 from django.conf import settings
 from django.core.mail import send_mail
-from users import models as user_models
+from hasker.users import models as user_models
 
 
 class Tag(models.Model):

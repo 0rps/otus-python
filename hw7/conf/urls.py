@@ -1,9 +1,9 @@
 from django.urls import path, include
 
-from qa import views as qa_views
+from hasker.qa import views as qa_views
 
 urlpatterns = [
     path('', qa_views.index),
-    path('qa/', include('qa.urls')),
-    path('users/', include('users.urls'))
+    path('qa/', include('hasker.qa.urls')),
+    path('users/', include('hasker.users.urls'))
 ]

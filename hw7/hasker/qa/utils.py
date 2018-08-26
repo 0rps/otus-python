@@ -1,4 +1,4 @@
-from qa import models
+from hasker.qa import models
 
 
 def trending_context_processor(_):
