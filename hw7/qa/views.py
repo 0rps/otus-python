@@ -94,6 +94,7 @@ def question_answers(request, question_id):
 
 @require_GET
 def search(request):
+    # TODO: query validation
     query = request.GET.get('q')
     page = request.GET.get('page') or 1
 
@@ -105,6 +106,7 @@ def search(request):
     })
 
 
+@require_POST
 @login_required(login_url=reverse_lazy('login'))
 def star_answer(request, answer_id):
     answer = get_object_or_404(models.Answer, pk=answer_id)
@@ -115,6 +117,7 @@ def star_answer(request, answer_id):
     return HttpResponse()
 
 
+@require_POST
 @login_required(login_url=reverse_lazy('login'))
 def unstar_answer(request, answer_id):
     answer = get_object_or_404(models.Answer, pk=answer_id)
@@ -125,10 +128,11 @@ def unstar_answer(request, answer_id):
     return HttpResponse()
 
 
+@require_POST
 @login_required(login_url=reverse_lazy('login'))
 def vote_answer(request, answer_id):
     try:
-        is_like = int(request.GET.get('like'))
+        is_like = int(request.POST.get('like'))
     except ValueError:
         return HttpResponseBadRequest()
     is_like = is_like > 0
@@ -146,6 +150,7 @@ def vote_answer(request, answer_id):
     return HttpResponse()
 
 
+@require_POST
 @login_required(login_url=reverse_lazy('login'))
 def unvote_answer(request, answer_id):
     result = models.AnswerLike.objects.filter(answer__id=answer_id)

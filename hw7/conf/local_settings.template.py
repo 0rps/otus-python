@@ -24,5 +24,6 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = ''
 EMAIL_HOST_PASSWORD = ''
 
+SEND_EMAIL = True
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")

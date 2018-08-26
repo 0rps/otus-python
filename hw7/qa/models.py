@@ -130,10 +130,11 @@ class Answer(models.Model):
         question.answers_count += 1
         question.save()
 
-        send_mail("You have one answer on Hasker",
-                  "User '{}' answered your question '{}'"
-                  .format(user.login, question.title),
-                  settings.EMAIL_HOST_USER, [question.author.email])
+        if settings.SEND_EMAIL:
+            send_mail("You have one answer on Hasker",
+                      "User '{}' answered your question '{}'"
+                      .format(user.login, question.title),
+                      settings.EMAIL_HOST_USER, [question.author.email])
 
         return answer
 

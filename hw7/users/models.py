@@ -20,9 +20,11 @@ class User(AbstractBaseUser):
     def create_user(cls, cleaned_data):
         user = cls(register_date=datetime.datetime.utcnow(), **cleaned_data)
         user.save()
-        send_mail("Hasker registration",
-                  "Welcome to hasker, mr. {}".format(user.login),
-                  settings.EMAIL_HOST_USER, [user.email])
+
+        if settings.SEND_EMAIL:
+            send_mail("Hasker registration",
+                      "Welcome to hasker, mr. {}".format(user.login),
+                      settings.EMAIL_HOST_USER, [user.email])
 
     def update_email_avatar(self, email, avatar):
         if avatar is not None:
