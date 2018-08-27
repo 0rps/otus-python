@@ -72,21 +72,24 @@ def question_answers(request, question_id):
             form = forms.AnswerForm()
         page = paginator.num_pages
 
-    q_like = models.QuestionLike.objects\
-        .filter(question__id=question_id)\
+    q_like = models.Like.objects\
+        .filter(object_id=question_id)\
         .filter(user__id=request.user.id)
     q_like = q_like[0] if len(q_like) > 0 else None
-    a_like = models.AnswerLike.question_answer_like(request.user, question)
+    a_likes = models.Like.question_answer_likes(request.user, question)
+    answers = paginator.get_page(page)
+
+    for answer in answers:
+        if answer.id in a_likes:
+            answer.rated = True
+            answer.rated_up = a_likes[answer.id].is_like > 0
 
     context = {'question': question,
                'main_form': form,
-               'answers': paginator.get_page(page),
+               'answers': answers,
                'question_rated': q_like,
                'question_rated_up': q_like and q_like.is_like,
                'question_rated_down': q_like and not q_like.is_like,
-               'answer_rated': a_like and a_like.answer.id,
-               'answer_rated_up': a_like and a_like.is_like,
-               'answer_rated_down': a_like and not a_like.is_like
                }
 
     return render(request, 'qa/question_answers.html', context)
@@ -141,9 +144,9 @@ def vote_answer(request, answer_id):
     if answer.author.id == request.user.id:
         return HttpResponseForbidden()
 
-    answer_likes = models.AnswerLike.objects.filter(answer__id=answer_id).filter(user__id=request.user.id)
+    answer_likes = models.Like.find_question_likes(answer_id, request.user.id)
     if len(answer_likes) == 0:
-        models.AnswerLike.create(answer, request.user, is_like)
+        models.Like.create(answer, models.Like.TYPE_ANSWER, request.user, is_like)
     else:
         return HttpResponseForbidden()
 
@@ -153,7 +156,7 @@ def vote_answer(request, answer_id):
 @require_POST
 @login_required(login_url=reverse_lazy('login'))
 def unvote_answer(request, answer_id):
-    result = models.AnswerLike.objects.filter(answer__id=answer_id)
+    result = models.Like.find_question_likes(answer_id, request.user.id)
     if len(result) > 0:
         like = result[0]
         like.cancel_like()
@@ -174,11 +177,9 @@ def vote_question(request, question_id):
     if question.author.id == request.user.id:
         return HttpResponseForbidden()
 
-    question_likes = models.QuestionLike.objects\
-        .filter(question__id=question_id)\
-        .filter(user__id=request.user.id)
+    question_likes = models.Like.find_question_likes(question_id, request.user.id)
     if len(question_likes) == 0:
-        models.QuestionLike.create(question, request.user, is_like)
+        models.Like.create(question, models.Like.TYPE_QUESTION, request.user, is_like)
     else:
         return HttpResponseForbidden()
 
@@ -188,7 +189,7 @@ def vote_question(request, question_id):
 @require_POST
 @login_required(login_url=reverse_lazy('login'))
 def unvote_question(request, question_id):
-    result = models.QuestionLike.objects.filter(question__id=question_id)
+    result = models.Like.find_question_likes(question_id, request.user.id)
     if len(result) > 0:
         result[0].cancel_like()
 

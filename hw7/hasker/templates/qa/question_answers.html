@@ -68,7 +68,7 @@
         <div class="col-sm px-0" style="max-width: 70px" >
                 <div class="container-fluid">
                     <div class="row "> <span
-                            {% if answer_rated == answer.id and answer_rated_up %}
+                            {% if answer.rated and answer.rated_up %}
                                 class="rated-icon oi oi-chevron-top mx-auto"
                                 onclick="cancelVoteAnswer({{ answer.id }})"
                             {% elif answer_rated %}
@@ -80,10 +80,10 @@
                             ></span> </div>
                     <div class="row "> <h2 class="rating-color my-0 mx-auto"> {{answer.rating}} </h2> </div>
                     <div class="row "> <span
-                            {% if answer.id == answer_rated and answer_rated_down %}
+                            {% if answer.rated and not answer.rated_up %}
                                 class="rated-icon oi oi-chevron-bottom mx-auto"
                                 onclick="cancelVoteAnswer({{ answer.id }})"
-                            {% elif answer_rated %}
+                            {% elif answer.rated %}
                                 class="non-rated-icon oi oi-chevron-bottom mx-auto"
                             {% elif answer.author.id != user.id and user.is_authenticated %}
                                 class="rating-icon oi oi-chevron-bottom mx-auto" onclick="voteAnswer({{ answer.id }}, false)"
@@ -95,7 +95,7 @@
                         <span
                                 class="starred-icon oi oi-star mx-auto"
                                 style="margin-top: 10px"
-                                onclick="unstarAnswer({{answer.id}})"
+                                onclick="unstarAnswer({{ answer.id }})"
                         ></span>
                     </div>
                     {% elif not question.has_correct_answer and user.id == question.author.id %}
@@ -103,7 +103,7 @@
                         <span
                                 class="starred-candidate-icon oi oi-star mx-auto"
                                 style="margin-top: 10px"
-                                onclick="starAnswer({{answer.id}})"
+                                onclick="starAnswer({{ answer.id }})"
                         ></span>
                     </div>
                     {% endif %}

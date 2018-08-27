@@ -1,5 +1,6 @@
 import datetime
 
+from django.shortcuts import get_object_or_404
 from django.db import models, transaction
 from django.conf import settings
 from django.core.mail import send_mail
@@ -139,68 +140,69 @@ class Answer(models.Model):
         return answer
 
 
-class QuestionLike(models.Model):
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+class Like(models.Model):
+    TYPE_ANSWER = 'answer'
+    TYPE_QUESTION = 'question'
+
     user = models.ForeignKey(user_models.User, on_delete=models.CASCADE)
+    object_id = models.IntegerField()
+    object_type = models.CharField(max_length=max(len(TYPE_ANSWER), len(TYPE_QUESTION)))
     is_like = models.BooleanField()
 
     @classmethod
     @transaction.atomic
-    def create(cls, question, user, is_like):
+    def create(cls, _object, object_type, user, is_like):
+        if object_type != cls.TYPE_ANSWER and object_type != cls.TYPE_QUESTION:
+            raise ValueError('Unknown object type for like')
+
         if is_like:
-            question.rating += 1
+            _object.rating += 1
         else:
-            question.rating -= 1
+            _object.rating -= 1
 
         like = cls()
-        like.question = question
+        like.object_type = object_type
+        like.object_id = _object.id
         like.user = user
         like.is_like = is_like
 
         like.save()
-        question.save()
+        _object.save()
 
     @transaction.atomic
     def cancel_like(self):
-        if self.is_like:
-            self.question.rating -= 1
+        if self.object_type == self.TYPE_QUESTION:
+            _object = get_object_or_404(Question, pk=self.object_id)
         else:
-            self.question.rating += 1
+            _object = get_object_or_404(Answer, pk=self.object_id)
+
+        if self.is_like:
+            _object.rating -= 1
+        else:
+            _object.rating += 1
         self.delete()
-        self.question.save()
-
-
-class AnswerLike(models.Model):
-    answer = models.ForeignKey(Answer, on_delete=models.CASCADE)
-    user = models.ForeignKey(user_models.User, on_delete=models.CASCADE)
-    is_like = models.BooleanField()
+        _object.save()
 
     @classmethod
-    @transaction.atomic
-    def create(cls, answer, user, is_like):
-        if is_like:
-            answer.rating += 1
-        else:
-            answer.rating -= 1
-
-        like = cls()
-        like.answer = answer
-        like.user = user
-        like.is_like = is_like
-
-        like.save()
-        answer.save()
+    def find_answer_likes(cls, answer_id, user_id=None):
+        return cls._find_likes(answer_id, cls.TYPE_ANSWER, user_id)
 
     @classmethod
-    def question_answer_like(cls, user, question):
-        result = cls.objects.filter(answer__question__id=question.id).filter(user__id=user.id)
-        return None if len(result) == 0 else result[0]
+    def find_question_likes(cls, question_id, user_id=None):
+        return cls._find_likes(question_id, cls.TYPE_QUESTION, user_id)
 
-    @transaction.atomic
-    def cancel_like(self):
-        if self.is_like:
-            self.answer.rating -= 1
-        else:
-            self.answer.rating += 1
-        self.delete()
-        self.answer.save()
+    @classmethod
+    def question_answer_likes(cls, user, question):
+        result = cls.objects.filter(object_id=question.id)\
+            .filter(object_type__exact=cls.TYPE_QUESTION).filter(user__id=user.id)
+        return {r.id: r for r in result}
+
+    @classmethod
+    def _find_likes(cls, object_id, object_type, user_id):
+        qs = cls.objects.filter(object_id=object_id) \
+            .filter(object_type__exact=object_type)
+
+        if user_id:
+            qs = qs.filter(user__id=user_id)
+
+        return qs
