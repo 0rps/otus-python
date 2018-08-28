@@ -192,10 +192,12 @@ class Like(models.Model):
         return cls._find_likes(question_id, cls.TYPE_QUESTION, user_id)
 
     @classmethod
-    def question_answer_likes(cls, user, question):
-        result = cls.objects.filter(object_id=question.id)\
-            .filter(object_type__exact=cls.TYPE_QUESTION).filter(user__id=user.id)
-        return {r.id: r for r in result}
+    def question_answer_likes(cls, user, answer_ids):
+        result = cls.objects.filter(user__id=user.id)\
+            .filter(object_type__exact=cls.TYPE_ANSWER)\
+            .filter(object_id__in=answer_ids)
+
+        return {r.object_id: r for r in result}
 
     @classmethod
     def _find_likes(cls, object_id, object_type, user_id):

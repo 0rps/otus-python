@@ -76,13 +76,14 @@ def question_answers(request, question_id):
         .filter(object_id=question_id)\
         .filter(user__id=request.user.id)
     q_like = q_like[0] if len(q_like) > 0 else None
-    a_likes = models.Like.question_answer_likes(request.user, question)
+
     answers = paginator.get_page(page)
+    a_likes = models.Like.question_answer_likes(request.user, [a.id for a in answers])
 
     for answer in answers:
         if answer.id in a_likes:
             answer.rated = True
-            answer.rated_up = a_likes[answer.id].is_like > 0
+            answer.rated_up = a_likes[answer.id].is_like
 
     context = {'question': question,
                'main_form': form,
@@ -144,7 +145,7 @@ def vote_answer(request, answer_id):
     if answer.author.id == request.user.id:
         return HttpResponseForbidden()
 
-    answer_likes = models.Like.find_question_likes(answer_id, request.user.id)
+    answer_likes = models.Like.find_answer_likes(answer_id, request.user.id)
     if len(answer_likes) == 0:
         models.Like.create(answer, models.Like.TYPE_ANSWER, request.user, is_like)
     else:
@@ -156,7 +157,7 @@ def vote_answer(request, answer_id):
 @require_POST
 @login_required(login_url=reverse_lazy('login'))
 def unvote_answer(request, answer_id):
-    result = models.Like.find_question_likes(answer_id, request.user.id)
+    result = models.Like.find_answer_likes(answer_id, request.user.id)
     if len(result) > 0:
         like = result[0]
         like.cancel_like()
