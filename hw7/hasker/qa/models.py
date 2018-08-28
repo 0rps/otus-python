@@ -17,7 +17,7 @@ class Question(models.Model):
     date = models.DateTimeField()
     rating = models.IntegerField(default=0)
     answers_count = models.IntegerField(default=0)
-    has_correct_answer = models.BooleanField(default=False)
+    correct_answer_id = models.IntegerField(null=True, default=None)
     author = models.ForeignKey(user_models.User, on_delete=models.CASCADE)
     tags = models.ManyToManyField(Tag)
 
@@ -69,23 +69,12 @@ class Question(models.Model):
 
     @transaction.atomic
     def set_correct_answer(self, answer):
-        answer.is_correct = True
-        self.has_correct_answer = True
-
-        answer.save()
+        self.correct_answer_id = answer.id
         self.save()
 
     @transaction.atomic
     def cancel_correct_answer(self):
-        answer_set = Answer.objects.filter(question__id=self.id).filter(is_correct=True)
-        if len(answer_set) == 0:
-            return
-
-        answer = answer_set[0]
-        answer.is_correct = False
-        answer.save()
-
-        self.has_correct_answer = False
+        self.correct_answer_id = None
         self.save()
 
     def time_ago_str(self):
@@ -116,7 +105,6 @@ class Answer(models.Model):
     body = models.TextField()
     date = models.DateTimeField(default=datetime.datetime.utcnow)
     rating = models.IntegerField(default=0)
-    is_correct = models.BooleanField(default=False)
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     author = models.ForeignKey(user_models.User, on_delete=models.CASCADE)
 

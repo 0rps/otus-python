@@ -117,6 +117,9 @@ def star_answer(request, answer_id):
     if answer.question.author.id != request.user.id:
         return HttpResponseForbidden()
 
+    if answer.question.correct_answer_id is not None:
+        return HttpResponseBadRequest()
+
     answer.question.set_correct_answer(answer)
     return HttpResponse()
 
@@ -125,8 +128,12 @@ def star_answer(request, answer_id):
 @login_required(login_url=reverse_lazy('login'))
 def unstar_answer(request, answer_id):
     answer = get_object_or_404(models.Answer, pk=answer_id)
+
     if answer.question.author.id != request.user.id:
         return HttpResponseForbidden()
+
+    if answer.id != answer.question.correct_answer_id:
+        return HttpResponseBadRequest()
 
     answer.question.cancel_correct_answer()
     return HttpResponse()

@@ -90,7 +90,7 @@
                             {% endif%}
                             ></span> </div>
 
-                    {% if answer.is_correct%}
+                    {% if answer.id == question.correct_answer_id%}
                     <div class="row">
                         <span
                                 class="starred-icon oi oi-star mx-auto"
@@ -98,7 +98,7 @@
                                 onclick="unstarAnswer({{ answer.id }})"
                         ></span>
                     </div>
-                    {% elif not question.has_correct_answer and user.id == question.author.id %}
+                    {% elif question.correct_answer_id == None and user.id == question.author.id %}
                     <div class="row">
                         <span
                                 class="starred-candidate-icon oi oi-star mx-auto"
